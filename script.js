@@ -117,13 +117,32 @@ const MAX_WEAPON = 3;
 const MAX_ABILITIES = 3;
 const MAX_WAVE = 50;
 const BONUS_DURATION = 8;
-const POWERUP_TYPES = ["weapon", "shield", "rapid", "life"];
-const SHOP_POOL = [
-  { type: "weapon", label: "Weapon Boost", desc: "Add a weapon power-up", price: 40 },
-  { type: "shield", label: "Shield Charge", desc: "Add a one-hit shield", price: 30 },
-  { type: "rapid", label: "Rapid Fire", desc: "Add a rapid-fire power-up", price: 25 },
-  { type: "life", label: "Extra Life", desc: "+1 life", price: 60 },
-];
+
+// Rarer power-ups have lower weight (drop chance) and cost more in the shop,
+// so holding onto a good one in a 3-slot inventory actually matters.
+const POWERUP_DEFS = {
+  weapon: { rarity: "common", weight: 18, color: "#39ff6a", label: "Weapon Boost", desc: "Widen your bullet spread", shopPrice: 35 },
+  shield: { rarity: "common", weight: 16, color: "#39c9ff", label: "Shield Charge", desc: "Blocks the next hit you take", shopPrice: 35 },
+  rapid: { rarity: "common", weight: 16, color: "#ffd23f", label: "Rapid Fire", desc: "Faster trigger, same power", shopPrice: 30 },
+  life: { rarity: "common", weight: 12, color: "#ff5566", label: "Extra Life", desc: "+1 life", shopPrice: 60 },
+  magnet: { rarity: "common", weight: 14, color: "#ff9ff3", label: "Tractor Beam", desc: "Pulls in nearby pickups", shopPrice: 30 },
+  overclock: { rarity: "uncommon", weight: 10, color: "#ff8c3c", label: "Overclock", desc: "Boosts your engine speed", shopPrice: 50 },
+  pierce: { rarity: "uncommon", weight: 9, color: "#b967ff", label: "Piercing Rounds", desc: "Bullets punch through enemies", shopPrice: 55 },
+  homing: { rarity: "rare", weight: 6, color: "#ff6b81", label: "Auto-Aim", desc: "Shots curve toward targets", shopPrice: 80 },
+  drone: { rarity: "rare", weight: 5, color: "#2de8c4", label: "Wingman Drone", desc: "A drone fires alongside you", shopPrice: 85 },
+  multiplier: { rarity: "legendary", weight: 3, color: "#fff2c0", label: "Premium Support", desc: "Doubles points while held", shopPrice: 130 },
+};
+const POWERUP_TYPES = Object.keys(POWERUP_DEFS);
+
+function pickWeightedPowerUpType() {
+  const total = POWERUP_TYPES.reduce((sum, t) => sum + POWERUP_DEFS[t].weight, 0);
+  let roll = Math.random() * total;
+  for (const t of POWERUP_TYPES) {
+    roll -= POWERUP_DEFS[t].weight;
+    if (roll <= 0) return t;
+  }
+  return POWERUP_TYPES[POWERUP_TYPES.length - 1];
+}
 const BG_TIERS = [
   { base: "#04060a", neb: "57,255,106" },
   { base: "#05040c", neb: "57,201,255" },
@@ -333,7 +352,13 @@ function makeBonusTargets() {
 }
 
 function buildShopOptions() {
-  const pool = [...SHOP_POOL];
+  const pool = POWERUP_TYPES.map((t) => ({
+    type: t,
+    label: POWERUP_DEFS[t].label,
+    desc: POWERUP_DEFS[t].desc,
+    price: POWERUP_DEFS[t].shopPrice,
+    rarity: POWERUP_DEFS[t].rarity,
+  }));
   const picks = [];
   for (let i = 0; i < 3 && pool.length; i++) {
     const idx = Math.floor(Math.random() * pool.length);
@@ -357,7 +382,9 @@ function showShopOverlay() {
     card.type = "button";
     card.className = "shopCard";
     card.disabled = coins < opt.price;
+    card.classList.add("rarity-" + opt.rarity);
     card.innerHTML =
+      '<span class="shopCardRarity">' + opt.rarity + "</span>" +
       '<span class="shopCardLabel">' + opt.label + "</span>" +
       '<span class="shopCardDesc">' + opt.desc + "</span>" +
       '<span class="shopCardPrice">' + opt.price + " coins</span>";
@@ -466,7 +493,7 @@ function startGame() {
 }
 
 function spawnPowerUp(x, y, type) {
-  const t = type || POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+  const t = type || pickWeightedPowerUpType();
   powerUps.push({ x, y, vy: 70, type: t, r: 11 });
 }
 
@@ -493,6 +520,9 @@ function fire() {
     bullets.push({ x: player.x - 8, y, vx: -70, vy: -430 });
     bullets.push({ x: player.x + 8, y, vx: 70, vy: -430 });
   }
+  if (hasAbility(player, "drone")) {
+    bullets.push({ x: player.x - 20, y: y + 6, vx: 0, vy: -420, drone: true });
+  }
   playShootSound();
   fireCooldown = hasAbility(player, "rapid") ? 0.09 : 0.22;
 }
@@ -508,8 +538,9 @@ function loop(now) {
 }
 
 function update(dt) {
-  if (moveLeft) player.x -= player.speed * dt;
-  if (moveRight) player.x += player.speed * dt;
+  const speedMult = hasAbility(player, "overclock") ? 1.4 : 1;
+  if (moveLeft) player.x -= player.speed * speedMult * dt;
+  if (moveRight) player.x += player.speed * speedMult * dt;
   player.x = Math.max(player.w, Math.min(W - player.w, player.x));
 
   fireCooldown -= dt;
@@ -524,7 +555,26 @@ function update(dt) {
     if (s.y > H) s.y = 0;
   });
 
+  const homing = hasAbility(player, "homing");
   bullets.forEach((b) => {
+    if (homing && !b.dead) {
+      let target = boss;
+      if (!target) {
+        let bestD = Infinity;
+        viruses.forEach((a) => {
+          if (!a.alive) return;
+          const d = Math.hypot(a.x - b.x, a.y - b.y);
+          if (d < bestD) {
+            bestD = d;
+            target = a;
+          }
+        });
+      }
+      if (target) {
+        const dx = target.x - b.x;
+        b.vx = Math.max(-260, Math.min(260, (b.vx || 0) + Math.sign(dx) * Math.min(Math.abs(dx) * 4, 260) * dt));
+      }
+    }
     b.x += (b.vx || 0) * dt;
     b.y += b.vy * dt;
   });
@@ -597,14 +647,29 @@ function update(dt) {
   });
   enemyBullets = enemyBullets.filter((b) => b.y < H + 10 && b.x > -20 && b.x < W + 20);
 
-  powerUps.forEach((p) => (p.y += p.vy * dt));
+  const magnet = hasAbility(player, "magnet");
+  powerUps.forEach((p) => {
+    if (magnet) {
+      const dx = player.x - p.x;
+      const dy = player.y - p.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist < 140) {
+        p.x += (dx / dist) * 90 * dt;
+        p.y += (dy / dist) * 90 * dt;
+        return;
+      }
+    }
+    p.y += p.vy * dt;
+  });
   powerUps = powerUps.filter((p) => p.y < H + 20);
 
+  const pierce = hasAbility(player, "pierce");
+  const scoreMult = hasAbility(player, "multiplier") ? 2 : 1;
   bullets.forEach((b) => {
     if (b.dead) return;
     if (boss) {
       if (rectHit(boss.x, boss.y, boss.w, boss.h, b.x, b.y, 6, 10)) {
-        b.dead = true;
+        if (!pierce) b.dead = true;
         boss.hp -= 1;
       }
       return;
@@ -613,8 +678,8 @@ function update(dt) {
       if (!a.alive || b.dead) return;
       if (rectHit(a.x, a.y, VIRUS_W, VIRUS_H, b.x, b.y, 4, 10)) {
         a.alive = false;
-        b.dead = true;
-        score += a.points;
+        if (!pierce) b.dead = true;
+        score += a.points * scoreMult;
         scoreEl.textContent = score;
       }
     });
@@ -625,7 +690,7 @@ function update(dt) {
     if (boss.form === "final") {
       winGame();
     } else {
-      score += 500 + wave * 50;
+      score += (500 + wave * 50) * scoreMult;
       scoreEl.textContent = score;
       enemyBullets = [];
       wave += 1;
@@ -661,14 +726,26 @@ function update(dt) {
 
 function updateBonusRound(dt) {
   bonusTimer -= dt;
+  const magnet = hasAbility(player, "magnet");
   bonusTargets.forEach((t) => {
     if (!t.alive) return;
+    if (magnet) {
+      const dx = player.x - t.x;
+      const dy = player.y - t.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist < 120) {
+        t.x += (dx / dist) * 70 * dt;
+        t.y += (dy / dist) * 70 * dt;
+        return;
+      }
+    }
     t.x += t.vx * dt;
     t.y += t.vy * dt;
     if (t.x < 24 || t.x > W - 24) t.vx *= -1;
     if (t.y < 24 || t.y > 110) t.vy *= -1;
   });
 
+  const scoreMult = hasAbility(player, "multiplier") ? 2 : 1;
   bullets.forEach((b) => {
     if (b.dead) return;
     bonusTargets.forEach((t) => {
@@ -677,7 +754,7 @@ function updateBonusRound(dt) {
         t.alive = false;
         b.dead = true;
         coins += t.value;
-        score += t.value;
+        score += t.value * scoreMult;
         scoreEl.textContent = score;
       }
     });
@@ -1208,17 +1285,57 @@ function drawPlayer() {
   ctx.arc(player.w / 2, player.h / 2 - 2, 2, 0, Math.PI * 2);
   ctx.fill();
 
+  if (hasAbility(player, "drone")) {
+    ctx.save();
+    ctx.translate(-20, 5);
+    ctx.shadowColor = "#2de8c4";
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = "#0c1712";
+    ctx.strokeStyle = "#2de8c4";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(-5, -3);
+    ctx.lineTo(5, 3);
+    ctx.moveTo(5, -3);
+    ctx.lineTo(-5, 3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(-5, -3, 1.8, 0, Math.PI * 2);
+    ctx.arc(5, -3, 1.8, 0, Math.PI * 2);
+    ctx.arc(-5, 3, 1.8, 0, Math.PI * 2);
+    ctx.arc(5, 3, 1.8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(0, 0, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.restore();
 }
 
 function drawPowerUp(p) {
-  const icons = { weapon: "#39ff6a", shield: "#39c9ff", rapid: "#ffd23f", life: "#ff5566" };
+  const def = POWERUP_DEFS[p.type];
+  const color = def.color;
   ctx.save();
   ctx.translate(p.x, p.y);
-  ctx.shadowColor = icons[p.type];
-  ctx.shadowBlur = 10;
+
+  if (def.rarity === "rare" || def.rarity === "legendary") {
+    const pulse = p.r + 3 + Math.sin(frame * 0.15) * 2;
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, pulse, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.shadowColor = color;
+  ctx.shadowBlur = def.rarity === "legendary" ? 16 : 10;
   ctx.fillStyle = "#0c1712";
-  ctx.strokeStyle = icons[p.type];
+  ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(0, 0, p.r, 0, Math.PI * 2);
@@ -1226,8 +1343,8 @@ function drawPowerUp(p) {
   ctx.stroke();
 
   ctx.shadowBlur = 0;
-  ctx.fillStyle = icons[p.type];
-  ctx.strokeStyle = icons[p.type];
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
   ctx.lineWidth = 1.6;
   if (p.type === "weapon") {
     // Phone Repair icon: wrench
@@ -1281,6 +1398,96 @@ function drawPowerUp(p) {
       ctx.fillRect(-1, -1.4, 2, 2.8);
       ctx.restore();
     }
+  } else if (p.type === "magnet") {
+    // Tractor Beam icon: horseshoe magnet
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(0, -1, 4.5, 0, Math.PI, false);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-4.5, -1);
+    ctx.lineTo(-4.5, -6);
+    ctx.moveTo(4.5, -1);
+    ctx.lineTo(4.5, -6);
+    ctx.stroke();
+  } else if (p.type === "overclock") {
+    // Overclock icon: lightning bolt
+    ctx.beginPath();
+    ctx.moveTo(1, -7);
+    ctx.lineTo(-4, 1);
+    ctx.lineTo(0, 1);
+    ctx.lineTo(-1, 7);
+    ctx.lineTo(5, -1);
+    ctx.lineTo(1, -1);
+    ctx.closePath();
+    ctx.fill();
+  } else if (p.type === "pierce") {
+    // Piercing Rounds icon: arrow through a ring
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-7, 0);
+    ctx.lineTo(7, 0);
+    ctx.moveTo(4, -2.5);
+    ctx.lineTo(7, 0);
+    ctx.lineTo(4, 2.5);
+    ctx.stroke();
+  } else if (p.type === "homing") {
+    // Auto-Aim icon: crosshair reticle
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, -7);
+    ctx.lineTo(0, -5);
+    ctx.moveTo(0, 5);
+    ctx.lineTo(0, 7);
+    ctx.moveTo(-7, 0);
+    ctx.lineTo(-5, 0);
+    ctx.moveTo(7, 0);
+    ctx.lineTo(5, 0);
+    ctx.stroke();
+  } else if (p.type === "drone") {
+    // Wingman Drone icon: quadcopter
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-6, -3);
+    ctx.lineTo(6, 3);
+    ctx.moveTo(6, -3);
+    ctx.lineTo(-6, 3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(-6, -3, 2, 0, Math.PI * 2);
+    ctx.arc(6, -3, 2, 0, Math.PI * 2);
+    ctx.arc(-6, 3, 2, 0, Math.PI * 2);
+    ctx.arc(6, 3, 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (p.type === "multiplier") {
+    // Premium Support icon: star badge
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const outerAng = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const innerAng = outerAng + Math.PI / 5;
+      const ox = Math.cos(outerAng) * 6;
+      const oy = Math.sin(outerAng) * 6;
+      const ix = Math.cos(innerAng) * 2.6;
+      const iy = Math.sin(innerAng) * 2.6;
+      if (i === 0) ctx.moveTo(ox, oy);
+      else ctx.lineTo(ox, oy);
+      ctx.lineTo(ix, iy);
+    }
+    ctx.closePath();
+    ctx.fill();
   }
   ctx.restore();
 }
@@ -1306,13 +1513,12 @@ function drawHud() {
   ctx.textAlign = "left";
   ctx.fillText("LV " + wave, 8, 22);
 
-  const abilityColors = { weapon: "#39ff6a", shield: "#39c9ff", rapid: "#ffd23f" };
   for (let i = 0; i < MAX_ABILITIES; i++) {
     const type = player.abilities[i];
     ctx.beginPath();
     ctx.arc(14 + i * 16, 36, 6, 0, Math.PI * 2);
     if (type) {
-      ctx.fillStyle = abilityColors[type] || "#7dffa3";
+      ctx.fillStyle = POWERUP_DEFS[type].color;
       ctx.fill();
     } else {
       ctx.strokeStyle = "rgba(125,255,163,0.35)";

@@ -513,6 +513,35 @@ canvas {
   font-weight: 700;
 }
 
+.shopCardRarity {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.overlay .shopCard.rarity-uncommon .shopCardRarity {
+  color: #7dffa3;
+}
+
+.overlay .shopCard.rarity-rare .shopCardRarity {
+  color: #ff9ff3;
+}
+
+.overlay .shopCard.rarity-legendary .shopCardRarity {
+  color: #fff2c0;
+}
+
+.overlay .shopCard.rarity-rare {
+  border-color: rgba(255, 107, 129, 0.5);
+}
+
+.overlay .shopCard.rarity-legendary {
+  border-color: rgba(255, 242, 192, 0.6);
+  box-shadow: 0 0 12px rgba(255, 242, 192, 0.25);
+}
+
 .overlay .ghostBtn {
   margin-top: 8px;
   padding: 8px 20px;
