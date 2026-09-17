@@ -615,16 +615,15 @@ function drawBossOrb(b) {
   }
 
   ctx.shadowBlur = 0;
-  for (let i = -1; i <= 1; i++) {
-    ctx.fillStyle = "#ffe066";
-    ctx.beginPath();
-    ctx.arc(i * 14, -4, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#3a0a1a";
-    ctx.beginPath();
-    ctx.arc(i * 14, -4, 1.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.fillStyle = "#ffe066";
+  ctx.beginPath();
+  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#3a0a1a";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 function drawBossHex(b) {
