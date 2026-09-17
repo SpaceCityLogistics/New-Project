@@ -906,9 +906,11 @@ function drawBackground() {
   }
 }
 
-function drawVirusInvader() {
+function drawVirusInvader(scale = 1) {
   // Space Invaders-style crab silhouette: wide flat body, legs kicked out
   // at the corners, glowing antenna tips.
+  ctx.save();
+  ctx.scale(scale, scale);
   ctx.beginPath();
   ctx.moveTo(-9, -4);
   ctx.lineTo(-9, 2);
@@ -934,10 +936,13 @@ function drawVirusInvader() {
   ctx.arc(-4, -9, pulse, 0, Math.PI * 2);
   ctx.arc(4, -9, pulse, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
 }
 
-function drawVirusWasp() {
+function drawVirusWasp(scale = 1) {
   // Galaga-style wasp: diamond thorax with swept, flapping wings.
+  ctx.save();
+  ctx.scale(scale, scale);
   const flap = Math.sin(frame * 0.2) * 2;
   ctx.beginPath();
   ctx.moveTo(0, -9);
@@ -970,10 +975,13 @@ function drawVirusWasp() {
   ctx.moveTo(2, -9);
   ctx.lineTo(3, -13);
   ctx.stroke();
+  ctx.restore();
 }
 
-function drawVirusSquid() {
+function drawVirusSquid(scale = 1) {
   // Classic Space Invaders squid: domed head, three trailing tentacles.
+  ctx.save();
+  ctx.scale(scale, scale);
   ctx.beginPath();
   ctx.arc(0, -2, 8.5, Math.PI, 0, false);
   ctx.lineTo(8.5, 3);
@@ -994,10 +1002,13 @@ function drawVirusSquid() {
   ctx.moveTo(6, 3);
   ctx.lineTo(6 + sway, 9);
   ctx.stroke();
+  ctx.restore();
 }
 
-function drawVirusArachnid() {
+function drawVirusArachnid(scale = 1) {
   // Gem-bodied crawler: faceted core with four jointed spider legs.
+  ctx.save();
+  ctx.scale(scale, scale);
   const twitch = Math.sin(frame * 0.18) * 1.2;
   ctx.beginPath();
   ctx.moveTo(0, -7);
@@ -1024,10 +1035,13 @@ function drawVirusArachnid() {
   ctx.lineTo(10, 6 + twitch);
   ctx.lineTo(13, 3);
   ctx.stroke();
+  ctx.restore();
 }
 
-function drawVirusBeetle() {
+function drawVirusBeetle(scale = 1) {
   // Circuit-shelled beetle: oval shell etched with glowing trace lines.
+  ctx.save();
+  ctx.scale(scale, scale);
   ctx.beginPath();
   ctx.ellipse(0, 0, 9, 7, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -1068,6 +1082,7 @@ function drawVirusBeetle() {
   ctx.moveTo(2, -7);
   ctx.lineTo(3, -11);
   ctx.stroke();
+  ctx.restore();
 }
 
 function drawVirus(a) {
@@ -1110,152 +1125,145 @@ function drawBonusTargets() {
 }
 
 function drawBossOrb(b) {
-  ctx.shadowColor = "#ff2e63";
-  ctx.shadowBlur = 18;
+  // Mothership Crab: an oversized Space Invaders crab hull with a command
+  // dome and pulsing running lights along the hull.
+  const color = "#ff2e63";
+  const scale = (b.w - 16) / 26;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 20;
   ctx.fillStyle = "#3a0a1a";
-  ctx.strokeStyle = "#ff2e63";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(0, 0, b.w / 2 - 8, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  const spikes = 14;
-  for (let i = 0; i < spikes; i++) {
-    const ang = (i / spikes) * Math.PI * 2 + frame * 0.015;
-    const r1 = b.w / 2 - 8;
-    const r2 = b.w / 2 + 6;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(ang) * r1, Math.sin(ang) * r1);
-    ctx.lineTo(Math.cos(ang) * r2, Math.sin(ang) * r2);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#ff2e63";
-    ctx.stroke();
-  }
+  ctx.strokeStyle = color;
+  drawVirusInvader(scale);
 
   ctx.shadowBlur = 0;
   ctx.fillStyle = "#ffe066";
   ctx.beginPath();
-  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  ctx.arc(0, -scale * 11, 6, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#3a0a1a";
   ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(0, 0, 8, 0, Math.PI * 2);
   ctx.stroke();
+
+  ctx.fillStyle = color;
+  const t = frame * 0.05;
+  for (let i = 0; i < 5; i++) {
+    const a = i / 4;
+    const glow = 0.35 + 0.65 * Math.max(0, Math.sin(t + a * Math.PI * 2));
+    ctx.globalAlpha = glow;
+    ctx.beginPath();
+    ctx.arc(-scale * 10 + a * scale * 20, scale * 5.5, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawBossHex(b) {
+  // Galaga Flagship: a scaled-up wasp with glowing capture-claw wingtips.
   const color = "#b967ff";
-  const r = b.w / 2 - 4;
+  const scale = (b.w - 20) / 26;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 18;
+  ctx.shadowBlur = 20;
   ctx.fillStyle = "#1a0a2e";
   ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const ang = (i / 6) * Math.PI * 2 + frame * 0.008;
-    const px = Math.cos(ang) * r;
-    const py = Math.sin(ang) * r;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  drawVirusWasp(scale);
 
   ctx.shadowBlur = 0;
-  for (let i = 0; i < 6; i++) {
-    const ang = (i / 6) * Math.PI * 2 + frame * 0.008;
-    const px = Math.cos(ang) * r;
-    const py = Math.sin(ang) * r;
-    ctx.beginPath();
-    ctx.arc(px, py, 4, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-  ctx.beginPath();
-  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  const flap = Math.sin(frame * 0.2) * 2 * scale;
   ctx.fillStyle = "#e8c3ff";
+  ctx.beginPath();
+  ctx.arc(-13 * scale, -5 * scale - flap, 3, 0, Math.PI * 2);
+  ctx.arc(13 * scale, -5 * scale - flap, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 6, 0, Math.PI * 2);
   ctx.fill();
 }
 
 function drawBossCrystal(b) {
+  // UFO Saucer: classic flying-saucer silhouette with a dome, blinking
+  // underlights, and a soft tractor-beam glow.
   const color = "#39c9ff";
-  const h = b.h / 2 + 6;
-  const w = b.w / 2 - 10;
+  const w = b.w / 2 - 6;
+  const h = b.h / 2 - 6;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 18;
+  ctx.shadowBlur = 20;
   ctx.fillStyle = "#0a1f2e";
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
+
   ctx.beginPath();
-  ctx.moveTo(0, -h);
-  ctx.lineTo(w, -h * 0.15);
-  ctx.lineTo(w * 0.5, h);
-  ctx.lineTo(-w * 0.5, h);
-  ctx.lineTo(-w, -h * 0.15);
-  ctx.closePath();
+  ctx.ellipse(0, h * 0.15, w, h * 0.55, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
-  ctx.strokeStyle = "rgba(57,201,255,0.6)";
-  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(0, -h);
-  ctx.lineTo(0, h);
-  ctx.moveTo(w, -h * 0.15);
-  ctx.lineTo(-w * 0.5, h);
-  ctx.moveTo(-w, -h * 0.15);
-  ctx.lineTo(w * 0.5, h);
+  ctx.arc(0, -h * 0.15, w * 0.45, Math.PI, 0, false);
+  ctx.fill();
   ctx.stroke();
 
   ctx.shadowBlur = 0;
+  const t = frame * 0.06;
   ctx.fillStyle = "#c8f0ff";
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const glow = 0.35 + 0.65 * Math.max(0, Math.sin(t + a * 3));
+    ctx.globalAlpha = glow;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * w * 0.75, h * 0.4 + Math.sin(a) * h * 0.2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  const beamPulse = 0.15 + Math.sin(frame * 0.1) * 0.08;
+  const beam = ctx.createLinearGradient(0, h * 0.6, 0, h * 1.6);
+  beam.addColorStop(0, `rgba(57,201,255,${beamPulse + 0.15})`);
+  beam.addColorStop(1, "rgba(57,201,255,0)");
+  ctx.fillStyle = beam;
   ctx.beginPath();
-  ctx.arc(0, -h * 0.35, 5, 0, Math.PI * 2);
+  ctx.moveTo(-w * 0.3, h * 0.6);
+  ctx.lineTo(w * 0.3, h * 0.6);
+  ctx.lineTo(w * 0.7, h * 1.6);
+  ctx.lineTo(-w * 0.7, h * 1.6);
+  ctx.closePath();
   ctx.fill();
 }
 
 function drawBossTwin(b) {
+  // Twin Squid Carrier: two Space Invaders squids fused by a pulsing
+  // energy bridge.
   const color = "#ffb347";
-  const r = b.w / 3 - 4;
+  const scale = 1.9;
   [-1, 1].forEach((side) => {
-    const cx = side * (b.w / 4);
+    ctx.save();
+    ctx.translate(side * (b.w / 4), 0);
     ctx.shadowColor = color;
     ctx.shadowBlur = 16;
     ctx.fillStyle = "#3a250a";
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(cx, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    const spikes = 8;
-    for (let i = 0; i < spikes; i++) {
-      const ang = (i / spikes) * Math.PI * 2 + frame * 0.02 * side;
-      const r1 = r;
-      const r2 = r + 5;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(ang) * r1, Math.sin(ang) * r1);
-      ctx.lineTo(cx + Math.cos(ang) * r2, Math.sin(ang) * r2);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = color;
-      ctx.stroke();
-    }
+    drawVirusSquid(scale);
+    ctx.restore();
   });
+
   ctx.shadowBlur = 0;
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(-b.w / 4 + r, 0);
-  ctx.lineTo(b.w / 4 - r, 0);
+  ctx.moveTo(-b.w / 4 + scale * 9, -scale * 2);
+  ctx.lineTo(b.w / 4 - scale * 9, -scale * 2);
   ctx.stroke();
+
+  const span = b.w / 2 - scale * 18;
+  const t = ((frame * 3) % (span * 2)) - span;
+  ctx.fillStyle = "#ffe4b8";
+  ctx.beginPath();
+  ctx.arc(t, -scale * 2, 2.2, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawBossFinal(b) {
+  // Hive Overlord: the spiky command ring from before, now with a small
+  // twitching arachnid-gem queen core instead of a flat pulse dot.
   const color = "#ff2e63";
   const r = b.w / 2 - 10;
 
@@ -1299,11 +1307,9 @@ function drawBossFinal(b) {
   ctx.restore();
 
   ctx.shadowBlur = 0;
-  const pulse = 7 + Math.sin(frame * 0.2) * 2;
   ctx.fillStyle = "#fff2c0";
-  ctx.beginPath();
-  ctx.arc(0, 0, pulse, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.strokeStyle = "#7a0018";
+  drawVirusArachnid(1.15);
 }
 
 function drawBoss(b) {
