@@ -10,41 +10,56 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="phone">
-    <div class="notch"></div>
-    <div class="screen">
-      <header class="topbar">
-        <div class="score">Score: <span id="score">0</span></div>
-        <div class="lives">Lives: <span id="lives">3</span></div>
-        <div class="best">Best: <span id="best">0</span></div>
-      </header>
+  <div class="page">
 
-      <div class="board-wrap">
-        <canvas id="board" width="300" height="450"></canvas>
+    <aside class="sidePanel brandPanel">
+      <img class="sideLogo" src="assets/astrotech-logo.png" alt="AstroTech Solutions" />
+      <h2>AstroTech<br />Solutions</h2>
+      <p class="tagline">Repairs, Setup &amp; Support</p>
+    </aside>
 
-        <div id="startOverlay" class="overlay">
-          <img class="logo" src="assets/astrotech-logo.png" alt="AstroTech Solutions" />
-          <h1>AstroTech Defender</h1>
-          <p>Drag or use arrows to move &middot; tap FIRE to shoot</p>
-          <p class="sub">Purge the viruses. Grab power-ups. Protect the network.</p>
-          <button id="startBtn">Play</button>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <header class="topbar">
+          <div class="score">Score: <span id="score">0</span></div>
+          <div class="lives">Lives: <span id="lives">3</span></div>
+          <div class="best">Best: <span id="best">0</span></div>
+        </header>
+
+        <div class="board-wrap">
+          <canvas id="board" width="300" height="450"></canvas>
+
+          <div id="startOverlay" class="overlay">
+            <h1>AstroTech Defender</h1>
+            <p>Drag or use arrows to move &middot; tap FIRE to shoot</p>
+            <p class="sub">Purge the viruses. Grab power-ups. Protect the network.</p>
+            <button id="startBtn">Play</button>
+          </div>
+
+          <div id="gameOverOverlay" class="overlay hidden">
+            <h1>Signal Lost</h1>
+            <p id="finalScore">Score: 0</p>
+            <button id="restartBtn">Play Again</button>
+          </div>
         </div>
 
-        <div id="gameOverOverlay" class="overlay hidden">
-          <h1>Signal Lost</h1>
-          <p id="finalScore">Score: 0</p>
-          <button id="restartBtn">Play Again</button>
+        <div class="dpad">
+          <button class="dbtn left" data-dir="left">&#9664;</button>
+          <button class="dbtn fire" id="fireBtn">FIRE</button>
+          <button class="dbtn right" data-dir="right">&#9654;</button>
         </div>
       </div>
-
-      <div class="dpad">
-        <button class="dbtn left" data-dir="left">&#9664;</button>
-        <button class="dbtn fire" id="fireBtn">FIRE</button>
-        <button class="dbtn right" data-dir="right">&#9654;</button>
-      </div>
-
-      <div class="brandFooter">AstroTech Solutions &middot; Repairs, Setup &amp; Support</div>
     </div>
+
+    <aside class="sidePanel contactPanel">
+      <h2>Need Real<br />Tech Help?</h2>
+      <a class="contactLink" href="tel:4809305278">📞 (480) 930-5278</a>
+      <p class="contactLine">📍 Gilbert, AZ &amp; East Valley</p>
+      <p class="contactLine">We come to you.</p>
+      <a class="ctaBtn" href="https://spacecitylogistics.github.io/AstroTech-Solutions/index.html" target="_blank" rel="noopener">Book a Repair</a>
+    </aside>
+
   </div>
 
   <script src="script.js"></script>
