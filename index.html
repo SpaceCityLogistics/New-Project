@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Axolotl Assault</title>
+<title>AstroTech Defender</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -20,13 +23,15 @@
         <canvas id="board" width="300" height="450"></canvas>
 
         <div id="startOverlay" class="overlay">
-          <h1>Axolotl Assault</h1>
-          <p>Drag to move, tap FIRE to shoot</p>
+          <img class="logo" src="assets/astrotech-logo.png" alt="AstroTech Solutions" />
+          <h1>AstroTech Defender</h1>
+          <p>Drag or use arrows to move &middot; tap FIRE to shoot</p>
+          <p class="sub">Purge the viruses. Grab power-ups. Protect the network.</p>
           <button id="startBtn">Play</button>
         </div>
 
         <div id="gameOverOverlay" class="overlay hidden">
-          <h1>Game Over</h1>
+          <h1>Signal Lost</h1>
           <p id="finalScore">Score: 0</p>
           <button id="restartBtn">Play Again</button>
         </div>
@@ -37,6 +42,8 @@
         <button class="dbtn fire" id="fireBtn">FIRE</button>
         <button class="dbtn right" data-dir="right">&#9654;</button>
       </div>
+
+      <div class="brandFooter">AstroTech Solutions &middot; Repairs, Setup &amp; Support</div>
     </div>
   </div>
 
