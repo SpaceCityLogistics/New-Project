@@ -906,102 +906,168 @@ function drawBackground() {
   }
 }
 
-function drawVirusSpiky() {
-  const r = VIRUS_W / 2 - 3;
+function drawVirusInvader() {
+  // Space Invaders-style crab silhouette: wide flat body, legs kicked out
+  // at the corners, glowing antenna tips.
   ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fill();
-  const spikes = 8;
-  for (let i = 0; i < spikes; i++) {
-    const ang = (i / spikes) * Math.PI * 2 + frame * 0.02;
-    const r1 = r;
-    const r2 = r + 6;
-    ctx.beginPath();
-    ctx.arc(Math.cos(ang) * (r1 + 3), Math.sin(ang) * (r1 + 3), 2.4, 0, Math.PI * 2);
-    ctx.moveTo(Math.cos(ang) * r1, Math.sin(ang) * r1);
-    ctx.lineTo(Math.cos(ang) * r2, Math.sin(ang) * r2);
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fill();
-  }
-}
-
-function drawVirusHex() {
-  const r = VIRUS_W / 2;
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const ang = (i / 6) * Math.PI * 2 + frame * 0.015;
-    const px = Math.cos(ang) * r;
-    const py = Math.sin(ang) * r;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
+  ctx.moveTo(-9, -4);
+  ctx.lineTo(-9, 2);
+  ctx.lineTo(-13, 2);
+  ctx.lineTo(-13, 6);
+  ctx.lineTo(-7, 6);
+  ctx.lineTo(-7, 3);
+  ctx.lineTo(7, 3);
+  ctx.lineTo(7, 6);
+  ctx.lineTo(13, 6);
+  ctx.lineTo(13, 2);
+  ctx.lineTo(9, 2);
+  ctx.lineTo(9, -4);
+  ctx.lineTo(4, -9);
+  ctx.lineTo(-4, -9);
   ctx.closePath();
   ctx.fill();
   ctx.lineWidth = 1.6;
   ctx.stroke();
-  for (let i = 0; i < 6; i++) {
-    const ang = (i / 6) * Math.PI * 2 + frame * 0.015;
-    const px = Math.cos(ang) * (r + 4);
-    const py = Math.sin(ang) * (r + 4);
-    ctx.beginPath();
-    ctx.arc(px, py, 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
+
+  const pulse = 1.6 + Math.sin(frame * 0.12) * 0.6;
+  ctx.beginPath();
+  ctx.arc(-4, -9, pulse, 0, Math.PI * 2);
+  ctx.arc(4, -9, pulse, 0, Math.PI * 2);
+  ctx.fill();
 }
 
-function drawVirusBlob() {
-  const r = VIRUS_W / 2 - 2;
+function drawVirusWasp() {
+  // Galaga-style wasp: diamond thorax with swept, flapping wings.
+  const flap = Math.sin(frame * 0.2) * 2;
   ctx.beginPath();
-  const points = 10;
-  for (let i = 0; i <= points; i++) {
-    const ang = (i / points) * Math.PI * 2;
-    const wobble = Math.sin(ang * 3 + frame * 0.06) * 3;
-    const px = Math.cos(ang) * (r + wobble);
-    const py = Math.sin(ang) * (r + wobble);
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
+  ctx.moveTo(0, -9);
+  ctx.lineTo(4, -2);
+  ctx.lineTo(3, 8);
+  ctx.lineTo(-3, 8);
+  ctx.lineTo(-4, -2);
   ctx.closePath();
   ctx.fill();
   ctx.lineWidth = 1.6;
   ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-4, -1);
+  ctx.lineTo(-13, -5 - flap);
+  ctx.lineTo(-10, 2);
+  ctx.lineTo(-3, 3);
+  ctx.closePath();
+  ctx.moveTo(4, -1);
+  ctx.lineTo(13, -5 - flap);
+  ctx.lineTo(10, 2);
+  ctx.lineTo(3, 3);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-2, -9);
+  ctx.lineTo(-3, -13);
+  ctx.moveTo(2, -9);
+  ctx.lineTo(3, -13);
+  ctx.stroke();
 }
 
-function drawVirusCrystal() {
-  const r = VIRUS_W / 2 + 1;
-  ctx.save();
-  ctx.rotate(Math.PI / 4 + frame * 0.01);
+function drawVirusSquid() {
+  // Classic Space Invaders squid: domed head, three trailing tentacles.
   ctx.beginPath();
-  ctx.moveTo(0, -r);
-  ctx.lineTo(r * 0.7, -r * 0.3);
-  ctx.lineTo(r * 0.5, r * 0.8);
-  ctx.lineTo(-r * 0.5, r * 0.8);
-  ctx.lineTo(-r * 0.7, -r * 0.3);
+  ctx.arc(0, -2, 8.5, Math.PI, 0, false);
+  ctx.lineTo(8.5, 3);
+  ctx.lineTo(-8.5, 3);
   ctx.closePath();
   ctx.fill();
   ctx.lineWidth = 1.6;
   ctx.stroke();
-  ctx.restore();
+
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = "round";
+  const sway = Math.sin(frame * 0.1) * 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-6, 3);
+  ctx.lineTo(-6 + sway, 9);
+  ctx.moveTo(0, 3);
+  ctx.lineTo(0 - sway, 11);
+  ctx.moveTo(6, 3);
+  ctx.lineTo(6 + sway, 9);
+  ctx.stroke();
 }
 
-function drawVirusRing() {
-  const r = VIRUS_W / 2;
+function drawVirusArachnid() {
+  // Gem-bodied crawler: faceted core with four jointed spider legs.
+  const twitch = Math.sin(frame * 0.18) * 1.2;
   ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.arc(0, 0, r - 6, 0, Math.PI * 2, true);
-  ctx.fill("evenodd");
+  ctx.moveTo(0, -7);
+  ctx.lineTo(5, 0);
+  ctx.lineTo(0, 7);
+  ctx.lineTo(-5, 0);
+  ctx.closePath();
+  ctx.fill();
   ctx.lineWidth = 1.6;
   ctx.stroke();
-  const pips = 6;
-  for (let i = 0; i < pips; i++) {
-    const ang = (i / pips) * Math.PI * 2 + frame * 0.02;
-    const px = Math.cos(ang) * (r - 3);
-    const py = Math.sin(ang) * (r - 3);
-    ctx.beginPath();
-    ctx.arc(px, py, 1.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
+
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-4, -3);
+  ctx.lineTo(-10, -6 + twitch);
+  ctx.lineTo(-13, -3);
+  ctx.moveTo(-4, 3);
+  ctx.lineTo(-10, 6 - twitch);
+  ctx.lineTo(-13, 3);
+  ctx.moveTo(4, -3);
+  ctx.lineTo(10, -6 - twitch);
+  ctx.lineTo(13, -3);
+  ctx.moveTo(4, 3);
+  ctx.lineTo(10, 6 + twitch);
+  ctx.lineTo(13, 3);
+  ctx.stroke();
+}
+
+function drawVirusBeetle() {
+  // Circuit-shelled beetle: oval shell etched with glowing trace lines.
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 9, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(0, -6);
+  ctx.lineTo(0, 6);
+  ctx.moveTo(-5, -3);
+  ctx.lineTo(5, -3);
+  ctx.moveTo(-5, 3);
+  ctx.lineTo(5, 3);
+  ctx.stroke();
+
+  const twitch = Math.sin(frame * 0.22) * 1;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-8, -4);
+  ctx.lineTo(-13, -6 + twitch);
+  ctx.moveTo(-9, 0);
+  ctx.lineTo(-14, 0);
+  ctx.moveTo(-8, 4);
+  ctx.lineTo(-13, 6 - twitch);
+  ctx.moveTo(8, -4);
+  ctx.lineTo(13, -6 - twitch);
+  ctx.moveTo(9, 0);
+  ctx.lineTo(14, 0);
+  ctx.moveTo(8, 4);
+  ctx.lineTo(13, 6 + twitch);
+  ctx.stroke();
+
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(-2, -7);
+  ctx.lineTo(-3, -11);
+  ctx.moveTo(2, -7);
+  ctx.lineTo(3, -11);
+  ctx.stroke();
 }
 
 function drawVirus(a) {
@@ -1013,11 +1079,11 @@ function drawVirus(a) {
   ctx.strokeStyle = a.color;
 
   const shape = a.shapeIndex % 5;
-  if (shape === 0) drawVirusSpiky();
-  else if (shape === 1) drawVirusHex();
-  else if (shape === 2) drawVirusBlob();
-  else if (shape === 3) drawVirusCrystal();
-  else drawVirusRing();
+  if (shape === 0) drawVirusInvader();
+  else if (shape === 1) drawVirusWasp();
+  else if (shape === 2) drawVirusSquid();
+  else if (shape === 3) drawVirusArachnid();
+  else drawVirusBeetle();
 
   ctx.restore();
 }
