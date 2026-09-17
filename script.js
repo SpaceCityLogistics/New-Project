@@ -94,6 +94,13 @@ const finalScoreEl = document.getElementById("finalScore");
 const startBtn = document.getElementById("startBtn");
 const restartBtn = document.getElementById("restartBtn");
 const fireBtn = document.getElementById("fireBtn");
+const shopOverlay = document.getElementById("shopOverlay");
+const shopGrid = document.getElementById("shopGrid");
+const shopCoinsEl = document.getElementById("shopCoins");
+const shopSkipBtn = document.getElementById("shopSkipBtn");
+const victoryOverlay = document.getElementById("victoryOverlay");
+const victoryScoreEl = document.getElementById("victoryScore");
+const victoryRestartBtn = document.getElementById("victoryRestartBtn");
 
 const VIRUS_W = 26;
 const VIRUS_H = 26;
@@ -107,9 +114,23 @@ const FORMATION_PATTERNS = ["grid", "vshape", "diamond", "zigzag", "arc"];
 const BOSS_INTERVAL = 3;
 const BOSS_FORMS = ["orb", "hex", "crystal", "twin"];
 const MAX_WEAPON = 3;
-const SHIELD_DURATION = 8;
-const RAPID_DURATION = 8;
+const MAX_ABILITIES = 3;
+const MAX_WAVE = 50;
+const BONUS_DURATION = 8;
 const POWERUP_TYPES = ["weapon", "shield", "rapid", "life"];
+const SHOP_POOL = [
+  { type: "weapon", label: "Weapon Boost", desc: "Add a weapon power-up", price: 40 },
+  { type: "shield", label: "Shield Charge", desc: "Add a one-hit shield", price: 30 },
+  { type: "rapid", label: "Rapid Fire", desc: "Add a rapid-fire power-up", price: 25 },
+  { type: "life", label: "Extra Life", desc: "+1 life", price: 60 },
+];
+const BG_TIERS = [
+  { base: "#04060a", neb: "57,255,106" },
+  { base: "#05040c", neb: "57,201,255" },
+  { base: "#0a0410", neb: "185,103,255" },
+  { base: "#100604", neb: "255,140,60" },
+  { base: "#140206", neb: "255,46,99" },
+];
 
 let player, bullets, enemyBullets, viruses, powerUps, score, best, lives;
 let running, wave, formationDir, formationX, frame, lastTime, animId;
@@ -123,6 +144,12 @@ let fireHeld = false;
 let fireCooldown = 0;
 let stars = [];
 let hitFlash = 0;
+let phase = "wave";
+let coins = 0;
+let bonusTimer = 0;
+let bonusTargets = [];
+let pendingBossWave = null;
+let shopOptions = [];
 
 function loadBest() {
   try {
@@ -163,6 +190,7 @@ function buildFormation(waveNum) {
   const list = [];
 
   const pushEnemy = (row, x, y) => {
+    const idx = row % VIRUS_COLORS.length;
     list.push({
       baseX: x,
       baseY: y,
@@ -174,7 +202,8 @@ function buildFormation(waveNum) {
       diveStartX: 0,
       diveStartY: 0,
       diveTargetX: 0,
-      color: VIRUS_COLORS[row % VIRUS_COLORS.length],
+      color: VIRUS_COLORS[idx],
+      shapeIndex: idx,
       points: (rows - row) * 10,
     });
   };
@@ -228,6 +257,21 @@ function buildFormation(waveNum) {
 }
 
 function makeBoss(waveNum) {
+  if (waveNum === MAX_WAVE) {
+    const hp = 900;
+    return {
+      x: CENTER_X,
+      y: 70,
+      w: 108,
+      h: 78,
+      hp,
+      maxHp: hp,
+      dir: 1,
+      speed: 62,
+      shotTimer: 1,
+      form: "final",
+    };
+  }
   const hp = 18 + waveNum * 6;
   const bossIndex = Math.round(waveNum / BOSS_INTERVAL) - 1;
   return {
@@ -245,19 +289,111 @@ function makeBoss(waveNum) {
 }
 
 function spawnWave(waveNum) {
-  if (waveNum % BOSS_INTERVAL === 0) {
+  if (waveNum === MAX_WAVE || waveNum % BOSS_INTERVAL === 0) {
     viruses = [];
     waveTotalCount = 0;
-    boss = makeBoss(waveNum);
-  } else {
     boss = null;
-    viruses = buildFormation(waveNum);
-    waveTotalCount = viruses.length;
+    startBonusRound(waveNum);
+    return;
   }
+  boss = null;
+  viruses = buildFormation(waveNum);
+  waveTotalCount = viruses.length;
   formationDir = 1;
   formationX = 0;
-  waveBanner = boss ? "BOSS INCOMING" : "LEVEL " + waveNum;
+  phase = "wave";
+  waveBanner = "LEVEL " + waveNum;
   waveBannerTime = 1.8;
+}
+
+function startBonusRound(waveNum) {
+  phase = "bonus";
+  pendingBossWave = waveNum;
+  bonusTimer = BONUS_DURATION;
+  bonusTargets = makeBonusTargets();
+  waveBanner = "BONUS ROUND";
+  waveBannerTime = 1.8;
+}
+
+function makeBonusTargets() {
+  const list = [];
+  const count = 10;
+  for (let i = 0; i < count; i++) {
+    list.push({
+      x: 30 + Math.random() * (W - 60),
+      y: 26 + Math.random() * 70,
+      vx: (Math.random() < 0.5 ? -1 : 1) * (30 + Math.random() * 40),
+      vy: (Math.random() < 0.5 ? -1 : 1) * (14 + Math.random() * 18),
+      r: 9,
+      alive: true,
+      value: 5 * (1 + Math.floor(Math.random() * 3)),
+    });
+  }
+  return list;
+}
+
+function buildShopOptions() {
+  const pool = [...SHOP_POOL];
+  const picks = [];
+  for (let i = 0; i < 3 && pool.length; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(idx, 1)[0]);
+  }
+  return picks;
+}
+
+function endBonusRound() {
+  bonusTargets = [];
+  shopOptions = buildShopOptions();
+  phase = "shop";
+  showShopOverlay();
+}
+
+function showShopOverlay() {
+  shopCoinsEl.textContent = "Coins: " + coins;
+  shopGrid.innerHTML = "";
+  shopOptions.forEach((opt) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "shopCard";
+    card.disabled = coins < opt.price;
+    card.innerHTML =
+      '<span class="shopCardLabel">' + opt.label + "</span>" +
+      '<span class="shopCardDesc">' + opt.desc + "</span>" +
+      '<span class="shopCardPrice">' + opt.price + " coins</span>";
+    card.addEventListener("click", () => buyShopOption(opt));
+    shopGrid.appendChild(card);
+  });
+  shopOverlay.classList.remove("hidden");
+}
+
+function buyShopOption(opt) {
+  if (coins < opt.price) return;
+  coins -= opt.price;
+  if (opt.type === "life") {
+    lives = Math.min(5, lives + 1);
+    livesEl.textContent = lives;
+  } else {
+    player.abilities.push(opt.type);
+    if (player.abilities.length > MAX_ABILITIES) player.abilities.shift();
+  }
+  closeShopAndStartBoss();
+}
+
+function skipShop() {
+  closeShopAndStartBoss();
+}
+
+function closeShopAndStartBoss() {
+  shopOverlay.classList.add("hidden");
+  const waveNum = pendingBossWave;
+  pendingBossWave = null;
+  boss = makeBoss(waveNum);
+  formationDir = 1;
+  formationX = 0;
+  waveBanner = waveNum === MAX_WAVE ? "FINAL BOSS" : "BOSS INCOMING";
+  waveBannerTime = 1.8;
+  phase = "wave";
 }
 
 function freshPlayer() {
@@ -267,9 +403,7 @@ function freshPlayer() {
     w: 28,
     h: 22,
     speed: 220,
-    weaponLevel: 1,
-    shieldTime: 0,
-    rapidTime: 0,
+    abilities: [],
     invuln: 0,
   };
 }
@@ -279,9 +413,13 @@ function resetGame() {
   bullets = [];
   enemyBullets = [];
   powerUps = [];
+  bonusTargets = [];
   score = 0;
+  coins = 0;
   lives = 3;
   wave = 1;
+  phase = "wave";
+  pendingBossWave = null;
   frame = 0;
   spawnWave(wave);
   scoreEl.textContent = score;
@@ -301,9 +439,25 @@ function endGame() {
   gameOverOverlay.classList.remove("hidden");
 }
 
+function winGame() {
+  running = false;
+  cancelAnimationFrame(animId);
+  score += 5000;
+  scoreEl.textContent = score;
+  if (score > best) {
+    best = score;
+    saveBest(best);
+    bestEl.textContent = best;
+  }
+  victoryScoreEl.textContent = `Final Score: ${score}`;
+  victoryOverlay.classList.remove("hidden");
+}
+
 function startGame() {
   startOverlay.classList.add("hidden");
   gameOverOverlay.classList.add("hidden");
+  victoryOverlay.classList.add("hidden");
+  shopOverlay.classList.add("hidden");
   resetGame();
   running = true;
   lastTime = performance.now();
@@ -316,12 +470,22 @@ function spawnPowerUp(x, y, type) {
   powerUps.push({ x, y, vy: 70, type: t, r: 11 });
 }
 
+function getWeaponLevel(p) {
+  const count = p.abilities.filter((a) => a === "weapon").length;
+  return Math.min(MAX_WEAPON, 1 + count);
+}
+
+function hasAbility(p, type) {
+  return p.abilities.includes(type);
+}
+
 function fire() {
   if (fireCooldown > 0) return;
   const y = player.y - player.h / 2;
-  if (player.weaponLevel === 1) {
+  const level = getWeaponLevel(player);
+  if (level === 1) {
     bullets.push({ x: player.x, y, vx: 0, vy: -440 });
-  } else if (player.weaponLevel === 2) {
+  } else if (level === 2) {
     bullets.push({ x: player.x - 7, y, vx: 0, vy: -440 });
     bullets.push({ x: player.x + 7, y, vx: 0, vy: -440 });
   } else {
@@ -330,7 +494,7 @@ function fire() {
     bullets.push({ x: player.x + 8, y, vx: 70, vy: -430 });
   }
   playShootSound();
-  fireCooldown = player.rapidTime > 0 ? 0.09 : 0.22;
+  fireCooldown = hasAbility(player, "rapid") ? 0.09 : 0.22;
 }
 
 function loop(now) {
@@ -349,10 +513,8 @@ function update(dt) {
   player.x = Math.max(player.w, Math.min(W - player.w, player.x));
 
   fireCooldown -= dt;
-  if (fireHeld) fire();
+  if (fireHeld && phase !== "shop") fire();
 
-  if (player.shieldTime > 0) player.shieldTime -= dt;
-  if (player.rapidTime > 0) player.rapidTime -= dt;
   if (player.invuln > 0) player.invuln -= dt;
   if (hitFlash > 0) hitFlash -= dt;
   if (waveBannerTime > 0) waveBannerTime -= dt;
@@ -361,6 +523,19 @@ function update(dt) {
     s.y += s.speed;
     if (s.y > H) s.y = 0;
   });
+
+  bullets.forEach((b) => {
+    b.x += (b.vx || 0) * dt;
+    b.y += b.vy * dt;
+  });
+  bullets = bullets.filter((b) => b.y > -10 && b.x > -10 && b.x < W + 10);
+
+  if (phase === "shop") return;
+
+  if (phase === "bonus") {
+    updateBonusRound(dt);
+    return;
+  }
 
   const diveChance = Math.min(0.0004 + wave * 0.00003, 0.0012);
   const shotChance = Math.min(0.02 + wave * 0.0015, 0.05);
@@ -416,12 +591,6 @@ function update(dt) {
 
   if (boss) updateBoss(dt);
 
-  bullets.forEach((b) => {
-    b.x += (b.vx || 0) * dt;
-    b.y += b.vy * dt;
-  });
-  bullets = bullets.filter((b) => b.y > -10 && b.x > -10 && b.x < W + 10);
-
   enemyBullets.forEach((b) => {
     b.x += (b.vx || 0) * dt;
     b.y += b.vy * dt;
@@ -453,12 +622,16 @@ function update(dt) {
   bullets = bullets.filter((b) => !b.dead);
 
   if (boss && boss.hp <= 0) {
-    score += 500 + wave * 50;
-    scoreEl.textContent = score;
-    enemyBullets = [];
-    wave += 1;
-    spawnWave(wave);
-    spawnPowerUp(W / 2, -20);
+    if (boss.form === "final") {
+      winGame();
+    } else {
+      score += 500 + wave * 50;
+      scoreEl.textContent = score;
+      enemyBullets = [];
+      wave += 1;
+      spawnWave(wave);
+      spawnPowerUp(W / 2, -20);
+    }
   }
 
   enemyBullets.forEach((b) => {
@@ -486,6 +659,36 @@ function update(dt) {
   }
 }
 
+function updateBonusRound(dt) {
+  bonusTimer -= dt;
+  bonusTargets.forEach((t) => {
+    if (!t.alive) return;
+    t.x += t.vx * dt;
+    t.y += t.vy * dt;
+    if (t.x < 24 || t.x > W - 24) t.vx *= -1;
+    if (t.y < 24 || t.y > 110) t.vy *= -1;
+  });
+
+  bullets.forEach((b) => {
+    if (b.dead) return;
+    bonusTargets.forEach((t) => {
+      if (!t.alive || b.dead) return;
+      if (rectHit(t.x, t.y, t.r * 2, t.r * 2, b.x, b.y, 4, 10)) {
+        t.alive = false;
+        b.dead = true;
+        coins += t.value;
+        score += t.value;
+        scoreEl.textContent = score;
+      }
+    });
+  });
+  bullets = bullets.filter((b) => !b.dead);
+
+  if (bonusTimer <= 0) {
+    endBonusRound();
+  }
+}
+
 function updateBoss(dt) {
   const margin = boss.w / 2 + 10;
   boss.x += boss.dir * boss.speed * dt;
@@ -496,9 +699,16 @@ function updateBoss(dt) {
 
   boss.shotTimer -= dt;
   if (boss.shotTimer <= 0) {
-    boss.shotTimer = Math.max(0.5, 1.4 - wave * 0.04);
-    for (let i = -1; i <= 1; i++) {
-      enemyBullets.push({ x: boss.x + i * 16, y: boss.y + boss.h / 2, vx: i * 40, vy: 170, boss: true });
+    if (boss.form === "final") {
+      boss.shotTimer = 0.55;
+      for (let i = -2; i <= 2; i++) {
+        enemyBullets.push({ x: boss.x + i * 14, y: boss.y + boss.h / 2, vx: i * 55, vy: 190, boss: true });
+      }
+    } else {
+      boss.shotTimer = Math.max(0.5, 1.4 - wave * 0.04);
+      for (let i = -1; i <= 1; i++) {
+        enemyBullets.push({ x: boss.x + i * 16, y: boss.y + boss.h / 2, vx: i * 40, vy: 170, boss: true });
+      }
     }
   }
 
@@ -508,26 +718,34 @@ function updateBoss(dt) {
 }
 
 function applyPowerUp(type) {
-  if (type === "weapon") {
-    player.weaponLevel = Math.min(MAX_WEAPON, player.weaponLevel + 1);
-  } else if (type === "shield") {
-    player.shieldTime = SHIELD_DURATION;
-  } else if (type === "rapid") {
-    player.rapidTime = RAPID_DURATION;
-  } else if (type === "life") {
+  if (type === "life") {
     lives = Math.min(5, lives + 1);
     livesEl.textContent = lives;
+    return;
+  }
+  player.abilities.push(type);
+  if (player.abilities.length > MAX_ABILITIES) {
+    player.abilities.shift();
   }
 }
 
 function hitPlayer() {
-  if (player.shieldTime > 0 || player.invuln > 0) return;
+  if (player.invuln > 0) return;
+  const shieldIdx = player.abilities.indexOf("shield");
+  if (shieldIdx !== -1) {
+    player.abilities.splice(shieldIdx, 1);
+    hitFlash = 0.3;
+    player.invuln = 0.6;
+    return;
+  }
   lives -= 1;
   livesEl.textContent = lives;
   hitFlash = 0.3;
   player.invuln = 1.2;
-  player.weaponLevel = 1;
-  player.rapidTime = 0;
+  if (player.abilities.length) {
+    const idx = Math.floor(Math.random() * player.abilities.length);
+    player.abilities.splice(idx, 1);
+  }
   if (lives <= 0) endGame();
 }
 
@@ -536,17 +754,18 @@ function rectHit(ax, ay, aw, ah, bx, by, bw, bh) {
 }
 
 function drawBackground() {
-  ctx.fillStyle = "#04060a";
+  const tier = BG_TIERS[Math.min(BG_TIERS.length - 1, Math.floor((wave - 1) / 10))];
+  ctx.fillStyle = tier.base;
   ctx.fillRect(0, 0, W, H);
 
   const neb1 = ctx.createRadialGradient(W * 0.2, H * 0.1, 0, W * 0.2, H * 0.1, 220);
-  neb1.addColorStop(0, "rgba(57,255,106,0.10)");
+  neb1.addColorStop(0, `rgba(${tier.neb},0.12)`);
   neb1.addColorStop(1, "transparent");
   ctx.fillStyle = neb1;
   ctx.fillRect(0, 0, W, H);
 
   const neb2 = ctx.createRadialGradient(W * 0.85, H * 0.6, 0, W * 0.85, H * 0.6, 260);
-  neb2.addColorStop(0, "rgba(57,255,106,0.08)");
+  neb2.addColorStop(0, `rgba(${tier.neb},0.09)`);
   neb2.addColorStop(1, "transparent");
   ctx.fillStyle = neb2;
   ctx.fillRect(0, 0, W, H);
@@ -560,6 +779,109 @@ function drawBackground() {
     ctx.fill();
   });
   ctx.globalAlpha = 1;
+
+  if (wave >= MAX_WAVE) {
+    ctx.fillStyle = `rgba(255,20,20,${0.05 + Math.sin(frame * 0.05) * 0.02})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function drawVirusSpiky() {
+  const r = VIRUS_W / 2 - 3;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+  const spikes = 8;
+  for (let i = 0; i < spikes; i++) {
+    const ang = (i / spikes) * Math.PI * 2 + frame * 0.02;
+    const r1 = r;
+    const r2 = r + 6;
+    ctx.beginPath();
+    ctx.arc(Math.cos(ang) * (r1 + 3), Math.sin(ang) * (r1 + 3), 2.4, 0, Math.PI * 2);
+    ctx.moveTo(Math.cos(ang) * r1, Math.sin(ang) * r1);
+    ctx.lineTo(Math.cos(ang) * r2, Math.sin(ang) * r2);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fill();
+  }
+}
+
+function drawVirusHex() {
+  const r = VIRUS_W / 2;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2 + frame * 0.015;
+    const px = Math.cos(ang) * r;
+    const py = Math.sin(ang) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2 + frame * 0.015;
+    const px = Math.cos(ang) * (r + 4);
+    const py = Math.sin(ang) * (r + 4);
+    ctx.beginPath();
+    ctx.arc(px, py, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawVirusBlob() {
+  const r = VIRUS_W / 2 - 2;
+  ctx.beginPath();
+  const points = 10;
+  for (let i = 0; i <= points; i++) {
+    const ang = (i / points) * Math.PI * 2;
+    const wobble = Math.sin(ang * 3 + frame * 0.06) * 3;
+    const px = Math.cos(ang) * (r + wobble);
+    const py = Math.sin(ang) * (r + wobble);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+}
+
+function drawVirusCrystal() {
+  const r = VIRUS_W / 2 + 1;
+  ctx.save();
+  ctx.rotate(Math.PI / 4 + frame * 0.01);
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  ctx.lineTo(r * 0.7, -r * 0.3);
+  ctx.lineTo(r * 0.5, r * 0.8);
+  ctx.lineTo(-r * 0.5, r * 0.8);
+  ctx.lineTo(-r * 0.7, -r * 0.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawVirusRing() {
+  const r = VIRUS_W / 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.arc(0, 0, r - 6, 0, Math.PI * 2, true);
+  ctx.fill("evenodd");
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  const pips = 6;
+  for (let i = 0; i < pips; i++) {
+    const ang = (i / pips) * Math.PI * 2 + frame * 0.02;
+    const px = Math.cos(ang) * (r - 3);
+    const py = Math.sin(ang) * (r - 3);
+    ctx.beginPath();
+    ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawVirus(a) {
@@ -568,26 +890,37 @@ function drawVirus(a) {
   ctx.shadowColor = a.color;
   ctx.shadowBlur = 8;
   ctx.fillStyle = a.color;
-  ctx.beginPath();
-  ctx.arc(0, 0, VIRUS_W / 2 - 3, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.strokeStyle = a.color;
 
-  const spikes = 8;
-  for (let i = 0; i < spikes; i++) {
-    const ang = (i / spikes) * Math.PI * 2 + frame * 0.02;
-    const r1 = VIRUS_W / 2 - 3;
-    const r2 = VIRUS_W / 2 + 3;
-    ctx.beginPath();
-    ctx.arc(Math.cos(ang) * (r1 + 3), Math.sin(ang) * (r1 + 3), 2.4, 0, Math.PI * 2);
-    ctx.moveTo(Math.cos(ang) * r1, Math.sin(ang) * r1);
-    ctx.lineTo(Math.cos(ang) * r2, Math.sin(ang) * r2);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = a.color;
-    ctx.stroke();
-    ctx.fill();
-  }
+  const shape = a.shapeIndex % 5;
+  if (shape === 0) drawVirusSpiky();
+  else if (shape === 1) drawVirusHex();
+  else if (shape === 2) drawVirusBlob();
+  else if (shape === 3) drawVirusCrystal();
+  else drawVirusRing();
 
   ctx.restore();
+}
+
+function drawBonusTargets() {
+  bonusTargets.forEach((t) => {
+    if (!t.alive) return;
+    ctx.save();
+    ctx.translate(t.x, t.y);
+    ctx.shadowColor = "#ffe066";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#ffe066";
+    ctx.beginPath();
+    ctx.arc(0, 0, t.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "#3a2f06";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, t.r - 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  });
 }
 
 function drawBossOrb(b) {
@@ -736,6 +1069,57 @@ function drawBossTwin(b) {
   ctx.stroke();
 }
 
+function drawBossFinal(b) {
+  const color = "#ff2e63";
+  const r = b.w / 2 - 10;
+
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 26;
+  ctx.fillStyle = "#1a0206";
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const spikes = 20;
+  for (let i = 0; i < spikes; i++) {
+    const ang = (i / spikes) * Math.PI * 2 + frame * 0.02;
+    const r1 = r;
+    const r2 = r + 9;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ang) * r1, Math.sin(ang) * r1);
+    ctx.lineTo(Math.cos(ang) * r2, Math.sin(ang) * r2);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
+
+  ctx.save();
+  ctx.rotate(-frame * 0.015);
+  ctx.strokeStyle = "#ffe066";
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2;
+    const px = Math.cos(ang) * (r * 0.55);
+    const py = Math.sin(ang) * (r * 0.55);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.shadowBlur = 0;
+  const pulse = 7 + Math.sin(frame * 0.2) * 2;
+  ctx.fillStyle = "#fff2c0";
+  ctx.beginPath();
+  ctx.arc(0, 0, pulse, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function drawBoss(b) {
   ctx.save();
   ctx.translate(b.x, b.y);
@@ -745,11 +1129,12 @@ function drawBoss(b) {
   if (b.form === "hex") drawBossHex(b);
   else if (b.form === "crystal") drawBossCrystal(b);
   else if (b.form === "twin") drawBossTwin(b);
+  else if (b.form === "final") drawBossFinal(b);
   else drawBossOrb(b);
 
   ctx.restore();
 
-  const barW = 110;
+  const barW = b.form === "final" ? 170 : 110;
   const pct = Math.max(0, b.hp / b.maxHp);
   ctx.save();
   ctx.translate(W / 2 - barW / 2, 24);
@@ -770,7 +1155,7 @@ function drawPlayer() {
   ctx.save();
   ctx.translate(player.x, player.y);
 
-  if (player.shieldTime > 0) {
+  if (hasAbility(player, "shield")) {
     ctx.beginPath();
     ctx.arc(0, 0, player.w / 2 + 10, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(57,201,255,0.8)";
@@ -907,7 +1292,7 @@ function drawWaveBanner() {
   ctx.font = "16px 'Baloo 2', sans-serif";
   ctx.textAlign = "center";
   const isBoss = waveBanner.includes("BOSS");
-  ctx.fillStyle = isBoss ? "#ff2e63" : "#39ff6a";
+  ctx.fillStyle = isBoss ? "#ff2e63" : waveBanner === "BONUS ROUND" ? "#ffe066" : "#39ff6a";
   ctx.shadowColor = ctx.fillStyle;
   ctx.shadowBlur = 12;
   ctx.fillText(waveBanner, W / 2, H / 2 - 70);
@@ -918,34 +1303,45 @@ function drawHud() {
   ctx.save();
   ctx.font = "10px 'Baloo 2', sans-serif";
   ctx.fillStyle = "#7dffa3";
+  ctx.textAlign = "left";
   ctx.fillText("LV " + wave, 8, 22);
-  for (let i = 0; i < MAX_WEAPON; i++) {
-    ctx.globalAlpha = i < player.weaponLevel ? 1 : 0.25;
-    ctx.fillRect(8 + i * 10, 8, 6, 6);
-  }
-  ctx.globalAlpha = 1;
 
-  let iconX = W - 16;
-  if (player.shieldTime > 0) {
-    ctx.fillStyle = "#39c9ff";
+  const abilityColors = { weapon: "#39ff6a", shield: "#39c9ff", rapid: "#ffd23f" };
+  for (let i = 0; i < MAX_ABILITIES; i++) {
+    const type = player.abilities[i];
     ctx.beginPath();
-    ctx.arc(iconX, 12, 5, 0, Math.PI * 2);
-    ctx.fill();
-    iconX -= 16;
+    ctx.arc(14 + i * 16, 36, 6, 0, Math.PI * 2);
+    if (type) {
+      ctx.fillStyle = abilityColors[type] || "#7dffa3";
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = "rgba(125,255,163,0.35)";
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
   }
-  if (player.rapidTime > 0) {
-    ctx.fillStyle = "#ffd23f";
-    ctx.beginPath();
-    ctx.arc(iconX, 12, 5, 0, Math.PI * 2);
-    ctx.fill();
+
+  if (coins > 0 || phase !== "wave") {
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#ffe066";
+    ctx.fillText("◆ " + coins, W - 8, 22);
   }
+
+  if (phase === "bonus") {
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#ffe066";
+    ctx.fillText(Math.ceil(bonusTimer) + "s", W - 8, 36);
+  }
+
   ctx.restore();
 }
 
 function draw() {
   drawBackground();
 
-  if (boss) {
+  if (phase === "bonus") {
+    drawBonusTargets();
+  } else if (boss) {
     drawBoss(boss);
   } else {
     viruses.forEach((a) => a.alive && drawVirus(a));
@@ -1042,6 +1438,8 @@ canvas.addEventListener("click", () => running && fire());
 
 startBtn.addEventListener("click", startGame);
 restartBtn.addEventListener("click", startGame);
+victoryRestartBtn.addEventListener("click", startGame);
+shopSkipBtn.addEventListener("click", skipShop);
 
 best = loadBest();
 bestEl.textContent = best;
@@ -1050,9 +1448,12 @@ player = freshPlayer();
 bullets = [];
 enemyBullets = [];
 powerUps = [];
+bonusTargets = [];
 score = 0;
+coins = 0;
 lives = 3;
 wave = 1;
+phase = "wave";
 boss = null;
 viruses = buildFormation(wave);
 waveTotalCount = viruses.length;

@@ -455,3 +455,73 @@ canvas {
 .dbtn.fire:active {
   background: var(--green-soft);
 }
+
+.shopCoins {
+  color: var(--mint);
+  font-size: 12px;
+  margin: 0 0 4px;
+}
+
+.shopGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 240px;
+}
+
+.overlay .shopCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(57, 255, 106, 0.06);
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.overlay .shopCard:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.overlay .shopCard:not(:disabled):hover {
+  background: rgba(57, 255, 106, 0.14);
+}
+
+.shopCardLabel {
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  color: var(--mint);
+  font-size: 14px;
+}
+
+.shopCardDesc {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.shopCardPrice {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.overlay .ghostBtn {
+  margin-top: 8px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: none;
+}

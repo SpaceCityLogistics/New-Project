@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="style.css?v=7" />
+<link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
   <div id="starfield"></div>
@@ -53,6 +53,27 @@
               <a class="ctaBtn" href="https://spacecitylogistics.github.io/AstroTech-Solutions/book.html" target="_blank" rel="noopener">Book Now</a>
             </div>
           </div>
+
+          <div id="shopOverlay" class="overlay hidden">
+            <h1>Upgrade!</h1>
+            <p class="sub" id="shopCoins">Coins: 0</p>
+            <div class="shopGrid" id="shopGrid"></div>
+            <button id="shopSkipBtn" class="ghostBtn">Skip</button>
+          </div>
+
+          <div id="victoryOverlay" class="overlay hidden">
+            <h1>Network Secured!</h1>
+            <p id="victoryScore">Final Score: 0</p>
+            <div class="discountBox">
+              <p class="discountLabel">You beat the game — enjoy a bigger reward</p>
+              <p class="discountCode">DISCOUNT CODE: SAVE$50</p>
+              <p class="discountHint">Book online and add this code to the comments to save $50.</p>
+            </div>
+            <div class="gameOverActions">
+              <button id="victoryRestartBtn">Play Again</button>
+              <a class="ctaBtn" href="https://spacecitylogistics.github.io/AstroTech-Solutions/book.html" target="_blank" rel="noopener">Book Now</a>
+            </div>
+          </div>
         </div>
 
         <div class="dpad">
@@ -79,6 +100,6 @@
 
   </div>
 
-  <script src="script.js?v=4"></script>
+  <script src="script.js?v=5"></script>
 </body>
 </html>
