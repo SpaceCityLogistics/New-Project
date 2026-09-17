@@ -353,6 +353,21 @@ canvas {
   opacity: 0.8;
 }
 
+.legendLabel {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  color: var(--green-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+#legendCanvas {
+  width: 240px;
+  height: 100px;
+}
+
 .overlay button {
   margin-top: 10px;
   padding: 12px 30px;

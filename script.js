@@ -101,6 +101,8 @@ const shopSkipBtn = document.getElementById("shopSkipBtn");
 const victoryOverlay = document.getElementById("victoryOverlay");
 const victoryScoreEl = document.getElementById("victoryScore");
 const victoryRestartBtn = document.getElementById("victoryRestartBtn");
+const legendCanvas = document.getElementById("legendCanvas");
+const legendCtx = legendCanvas ? legendCanvas.getContext("2d") : null;
 
 const VIRUS_W = 26;
 const VIRUS_H = 26;
@@ -166,9 +168,11 @@ let hitFlash = 0;
 let phase = "wave";
 let coins = 0;
 let bonusTimer = 0;
+let bonusSpawnTimer = 0;
 let bonusTargets = [];
 let pendingBossWave = null;
 let shopOptions = [];
+let shopTier = 0;
 
 function loadBest() {
   try {
@@ -325,45 +329,76 @@ function spawnWave(waveNum) {
   waveBannerTime = 1.8;
 }
 
+const BONUS_TARGET_SPEED = [220, 320];
+
 function startBonusRound(waveNum) {
   phase = "bonus";
   pendingBossWave = waveNum;
   bonusTimer = BONUS_DURATION;
-  bonusTargets = makeBonusTargets();
+  bonusSpawnTimer = 0;
+  bonusTargets = [];
+  // Clear anything left over from the wave that just ended so nothing
+  // frozen or invisible-but-solid lingers through the bonus round.
+  enemyBullets = [];
+  powerUps = [];
+  for (let i = 0; i < 6; i++) spawnBonusTarget();
   waveBanner = "BONUS ROUND";
   waveBannerTime = 1.8;
 }
 
-function makeBonusTargets() {
-  const list = [];
-  const count = 10;
-  for (let i = 0; i < count; i++) {
-    list.push({
-      x: 30 + Math.random() * (W - 60),
-      y: 26 + Math.random() * 70,
-      vx: (Math.random() < 0.5 ? -1 : 1) * (30 + Math.random() * 40),
-      vy: (Math.random() < 0.5 ? -1 : 1) * (14 + Math.random() * 18),
-      r: 9,
-      alive: true,
-      value: 5 * (1 + Math.floor(Math.random() * 3)),
-    });
+function spawnBonusTarget() {
+  const speed = BONUS_TARGET_SPEED[0] + Math.random() * (BONUS_TARGET_SPEED[1] - BONUS_TARGET_SPEED[0]);
+  const edge = Math.floor(Math.random() * 3);
+  let x, y, vx, vy;
+  if (edge === 0) {
+    x = -20;
+    y = 20 + Math.random() * (H * 0.45);
+    vx = speed;
+    vy = (Math.random() - 0.5) * 90;
+  } else if (edge === 1) {
+    x = W + 20;
+    y = 20 + Math.random() * (H * 0.45);
+    vx = -speed;
+    vy = (Math.random() - 0.5) * 90;
+  } else {
+    x = 20 + Math.random() * (W - 40);
+    y = -20;
+    vx = (Math.random() - 0.5) * 120;
+    vy = speed * 0.8;
   }
-  return list;
+  bonusTargets.push({ x, y, vx, vy, r: 9, alive: true, value: 5 * (1 + Math.floor(Math.random() * 3)) });
+}
+
+function shopRarityWeight(rarity, tier) {
+  const base = { common: 30, uncommon: 18, rare: 8, legendary: 3 };
+  const growth = { common: -1.6, uncommon: 0.6, rare: 1.6, legendary: 1.1 };
+  return Math.max(1, base[rarity] + growth[rarity] * tier);
 }
 
 function buildShopOptions() {
-  const pool = POWERUP_TYPES.map((t) => ({
-    type: t,
-    label: POWERUP_DEFS[t].label,
-    desc: POWERUP_DEFS[t].desc,
-    price: POWERUP_DEFS[t].shopPrice,
-    rarity: POWERUP_DEFS[t].rarity,
-  }));
+  const tier = Math.min(shopTier, 12);
+  const priceMult = 1 + Math.min(shopTier, 9) * 0.22;
+  const pool = POWERUP_TYPES.map((t) => ({ type: t, ...POWERUP_DEFS[t] }));
   const picks = [];
   for (let i = 0; i < 3 && pool.length; i++) {
-    const idx = Math.floor(Math.random() * pool.length);
-    picks.push(pool.splice(idx, 1)[0]);
+    const weights = pool.map((p) => shopRarityWeight(p.rarity, tier));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let roll = Math.random() * total;
+    let idx = 0;
+    for (; idx < pool.length - 1; idx++) {
+      roll -= weights[idx];
+      if (roll <= 0) break;
+    }
+    const item = pool.splice(idx, 1)[0];
+    picks.push({
+      type: item.type,
+      label: item.label,
+      desc: item.desc,
+      rarity: item.rarity,
+      price: Math.round(item.shopPrice * priceMult),
+    });
   }
+  shopTier += 1;
   return picks;
 }
 
@@ -441,6 +476,8 @@ function resetGame() {
   enemyBullets = [];
   powerUps = [];
   bonusTargets = [];
+  bonusSpawnTimer = 0;
+  shopTier = 0;
   score = 0;
   coins = 0;
   lives = 3;
@@ -462,7 +499,7 @@ function endGame() {
     saveBest(best);
     bestEl.textContent = best;
   }
-  finalScoreEl.textContent = `Score: ${score}`;
+  finalScoreEl.textContent = `Score: ${score} · Level ${wave}`;
   gameOverOverlay.classList.remove("hidden");
 }
 
@@ -681,6 +718,7 @@ function update(dt) {
         if (!pierce) b.dead = true;
         score += a.points * scoreMult;
         scoreEl.textContent = score;
+        if (Math.random() < 0.05) spawnPowerUp(a.x, a.y);
       }
     });
   });
@@ -726,6 +764,13 @@ function update(dt) {
 
 function updateBonusRound(dt) {
   bonusTimer -= dt;
+
+  bonusSpawnTimer -= dt;
+  if (bonusSpawnTimer <= 0 && bonusTimer > 0.6) {
+    bonusSpawnTimer = 0.22 + Math.random() * 0.2;
+    spawnBonusTarget();
+  }
+
   const magnet = hasAbility(player, "magnet");
   bonusTargets.forEach((t) => {
     if (!t.alive) return;
@@ -733,17 +778,15 @@ function updateBonusRound(dt) {
       const dx = player.x - t.x;
       const dy = player.y - t.y;
       const dist = Math.hypot(dx, dy) || 1;
-      if (dist < 120) {
-        t.x += (dx / dist) * 70 * dt;
-        t.y += (dy / dist) * 70 * dt;
-        return;
+      if (dist < 100) {
+        t.vx += (dx / dist) * 260 * dt;
+        t.vy += (dy / dist) * 260 * dt;
       }
     }
     t.x += t.vx * dt;
     t.y += t.vy * dt;
-    if (t.x < 24 || t.x > W - 24) t.vx *= -1;
-    if (t.y < 24 || t.y > 110) t.vy *= -1;
   });
+  bonusTargets = bonusTargets.filter((t) => t.alive && t.x > -40 && t.x < W + 40 && t.y > -40 && t.y < H + 40);
 
   const scoreMult = hasAbility(player, "multiplier") ? 2 : 1;
   bullets.forEach((b) => {
@@ -1315,6 +1358,204 @@ function drawPlayer() {
   ctx.restore();
 }
 
+function drawPowerUpGlyph(c, type) {
+  const color = POWERUP_DEFS[type].color;
+  c.fillStyle = color;
+  c.strokeStyle = color;
+  c.lineWidth = 1.6;
+  if (type === "weapon") {
+    // Phone Repair icon: wrench
+    c.beginPath();
+    c.arc(-3, -3, 2.1, 0, Math.PI * 2);
+    c.arc(3, 3, 2.1, 0, Math.PI * 2);
+    c.fill();
+    c.lineWidth = 2.2;
+    c.beginPath();
+    c.moveTo(-2, -2);
+    c.lineTo(2, 2);
+    c.stroke();
+  } else if (type === "shield") {
+    // Security icon: shield outline
+    c.beginPath();
+    c.moveTo(0, -6);
+    c.lineTo(5, -3.5);
+    c.lineTo(5, 1.5);
+    c.quadraticCurveTo(5, 6, 0, 7.5);
+    c.quadraticCurveTo(-5, 6, -5, 1.5);
+    c.lineTo(-5, -3.5);
+    c.closePath();
+    c.fill();
+  } else if (type === "rapid") {
+    // Data Transfer icon: up/down arrows
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(-3, 2);
+    c.lineTo(-3, -5);
+    c.moveTo(-5.5, -2);
+    c.lineTo(-3, -5);
+    c.lineTo(-0.5, -2);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(3, -2);
+    c.lineTo(3, 5);
+    c.moveTo(0.5, 2);
+    c.lineTo(3, 5);
+    c.lineTo(5.5, 2);
+    c.stroke();
+  } else if (type === "life") {
+    // Tech Support icon: gear
+    c.beginPath();
+    c.arc(0, 0, 3, 0, Math.PI * 2);
+    c.fill();
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * Math.PI * 2;
+      c.save();
+      c.rotate(ang);
+      c.translate(0, -5.5);
+      c.fillRect(-1, -1.4, 2, 2.8);
+      c.restore();
+    }
+  } else if (type === "magnet") {
+    // Tractor Beam icon: horseshoe magnet
+    c.lineWidth = 2.2;
+    c.beginPath();
+    c.arc(0, -1, 4.5, 0, Math.PI, false);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(-4.5, -1);
+    c.lineTo(-4.5, -6);
+    c.moveTo(4.5, -1);
+    c.lineTo(4.5, -6);
+    c.stroke();
+  } else if (type === "overclock") {
+    // Overclock icon: lightning bolt
+    c.beginPath();
+    c.moveTo(1, -7);
+    c.lineTo(-4, 1);
+    c.lineTo(0, 1);
+    c.lineTo(-1, 7);
+    c.lineTo(5, -1);
+    c.lineTo(1, -1);
+    c.closePath();
+    c.fill();
+  } else if (type === "pierce") {
+    // Piercing Rounds icon: arrow through a ring
+    c.lineWidth = 1.8;
+    c.beginPath();
+    c.arc(0, 0, 4, 0, Math.PI * 2);
+    c.stroke();
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(-7, 0);
+    c.lineTo(7, 0);
+    c.moveTo(4, -2.5);
+    c.lineTo(7, 0);
+    c.lineTo(4, 2.5);
+    c.stroke();
+  } else if (type === "homing") {
+    // Auto-Aim icon: crosshair reticle
+    c.lineWidth = 1.6;
+    c.beginPath();
+    c.arc(0, 0, 5, 0, Math.PI * 2);
+    c.stroke();
+    c.beginPath();
+    c.arc(0, 0, 1.6, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.moveTo(0, -7);
+    c.lineTo(0, -5);
+    c.moveTo(0, 5);
+    c.lineTo(0, 7);
+    c.moveTo(-7, 0);
+    c.lineTo(-5, 0);
+    c.moveTo(7, 0);
+    c.lineTo(5, 0);
+    c.stroke();
+  } else if (type === "drone") {
+    // Wingman Drone icon: quadcopter
+    c.lineWidth = 1.6;
+    c.beginPath();
+    c.moveTo(-6, -3);
+    c.lineTo(6, 3);
+    c.moveTo(6, -3);
+    c.lineTo(-6, 3);
+    c.stroke();
+    c.beginPath();
+    c.arc(-6, -3, 2, 0, Math.PI * 2);
+    c.arc(6, -3, 2, 0, Math.PI * 2);
+    c.arc(-6, 3, 2, 0, Math.PI * 2);
+    c.arc(6, 3, 2, 0, Math.PI * 2);
+    c.stroke();
+    c.beginPath();
+    c.arc(0, 0, 2.2, 0, Math.PI * 2);
+    c.fill();
+  } else if (type === "multiplier") {
+    // Premium Support icon: star badge
+    c.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const outerAng = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const innerAng = outerAng + Math.PI / 5;
+      const ox = Math.cos(outerAng) * 6;
+      const oy = Math.sin(outerAng) * 6;
+      const ix = Math.cos(innerAng) * 2.6;
+      const iy = Math.sin(innerAng) * 2.6;
+      if (i === 0) c.moveTo(ox, oy);
+      else c.lineTo(ox, oy);
+      c.lineTo(ix, iy);
+    }
+    c.closePath();
+    c.fill();
+  }
+}
+
+const LEGEND_SHORT_LABEL = {
+  weapon: "Weapon",
+  shield: "Shield",
+  rapid: "Rapid",
+  life: "Life",
+  magnet: "Magnet",
+  overclock: "Overclock",
+  pierce: "Pierce",
+  homing: "Auto-Aim",
+  drone: "Drone",
+  multiplier: "Premium",
+};
+
+function drawLegend() {
+  if (!legendCtx) return;
+  const cols = 5;
+  const cellW = legendCanvas.width / cols;
+  const cellH = legendCanvas.height / 2;
+  legendCtx.clearRect(0, 0, legendCanvas.width, legendCanvas.height);
+  POWERUP_TYPES.forEach((type, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = col * cellW + cellW / 2;
+    const cy = row * cellH + cellH / 2 - 6;
+    const color = POWERUP_DEFS[type].color;
+
+    legendCtx.save();
+    legendCtx.translate(cx, cy);
+    legendCtx.shadowColor = color;
+    legendCtx.shadowBlur = 6;
+    legendCtx.fillStyle = "#0c1712";
+    legendCtx.strokeStyle = color;
+    legendCtx.lineWidth = 1.6;
+    legendCtx.beginPath();
+    legendCtx.arc(0, 0, 10, 0, Math.PI * 2);
+    legendCtx.fill();
+    legendCtx.stroke();
+    legendCtx.shadowBlur = 0;
+    drawPowerUpGlyph(legendCtx, type);
+    legendCtx.restore();
+
+    legendCtx.fillStyle = "#9fb3a6";
+    legendCtx.font = "7.5px 'Inter', sans-serif";
+    legendCtx.textAlign = "center";
+    legendCtx.fillText(LEGEND_SHORT_LABEL[type], cx, cy + 20);
+  });
+}
+
 function drawPowerUp(p) {
   const def = POWERUP_DEFS[p.type];
   const color = def.color;
@@ -1343,152 +1584,7 @@ function drawPowerUp(p) {
   ctx.stroke();
 
   ctx.shadowBlur = 0;
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.6;
-  if (p.type === "weapon") {
-    // Phone Repair icon: wrench
-    ctx.beginPath();
-    ctx.arc(-3, -3, 2.1, 0, Math.PI * 2);
-    ctx.arc(3, 3, 2.1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.moveTo(-2, -2);
-    ctx.lineTo(2, 2);
-    ctx.stroke();
-  } else if (p.type === "shield") {
-    // Security icon: shield outline
-    ctx.beginPath();
-    ctx.moveTo(0, -6);
-    ctx.lineTo(5, -3.5);
-    ctx.lineTo(5, 1.5);
-    ctx.quadraticCurveTo(5, 6, 0, 7.5);
-    ctx.quadraticCurveTo(-5, 6, -5, 1.5);
-    ctx.lineTo(-5, -3.5);
-    ctx.closePath();
-    ctx.fill();
-  } else if (p.type === "rapid") {
-    // Data Transfer icon: up/down arrows
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-3, 2);
-    ctx.lineTo(-3, -5);
-    ctx.moveTo(-5.5, -2);
-    ctx.lineTo(-3, -5);
-    ctx.lineTo(-0.5, -2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(3, -2);
-    ctx.lineTo(3, 5);
-    ctx.moveTo(0.5, 2);
-    ctx.lineTo(3, 5);
-    ctx.lineTo(5.5, 2);
-    ctx.stroke();
-  } else if (p.type === "life") {
-    // Tech Support icon: gear
-    ctx.beginPath();
-    ctx.arc(0, 0, 3, 0, Math.PI * 2);
-    ctx.fill();
-    for (let i = 0; i < 6; i++) {
-      const ang = (i / 6) * Math.PI * 2;
-      ctx.save();
-      ctx.rotate(ang);
-      ctx.translate(0, -5.5);
-      ctx.fillRect(-1, -1.4, 2, 2.8);
-      ctx.restore();
-    }
-  } else if (p.type === "magnet") {
-    // Tractor Beam icon: horseshoe magnet
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.arc(0, -1, 4.5, 0, Math.PI, false);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-4.5, -1);
-    ctx.lineTo(-4.5, -6);
-    ctx.moveTo(4.5, -1);
-    ctx.lineTo(4.5, -6);
-    ctx.stroke();
-  } else if (p.type === "overclock") {
-    // Overclock icon: lightning bolt
-    ctx.beginPath();
-    ctx.moveTo(1, -7);
-    ctx.lineTo(-4, 1);
-    ctx.lineTo(0, 1);
-    ctx.lineTo(-1, 7);
-    ctx.lineTo(5, -1);
-    ctx.lineTo(1, -1);
-    ctx.closePath();
-    ctx.fill();
-  } else if (p.type === "pierce") {
-    // Piercing Rounds icon: arrow through a ring
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-7, 0);
-    ctx.lineTo(7, 0);
-    ctx.moveTo(4, -2.5);
-    ctx.lineTo(7, 0);
-    ctx.lineTo(4, 2.5);
-    ctx.stroke();
-  } else if (p.type === "homing") {
-    // Auto-Aim icon: crosshair reticle
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.arc(0, 0, 5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, 0, 1.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(0, -7);
-    ctx.lineTo(0, -5);
-    ctx.moveTo(0, 5);
-    ctx.lineTo(0, 7);
-    ctx.moveTo(-7, 0);
-    ctx.lineTo(-5, 0);
-    ctx.moveTo(7, 0);
-    ctx.lineTo(5, 0);
-    ctx.stroke();
-  } else if (p.type === "drone") {
-    // Wingman Drone icon: quadcopter
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(-6, -3);
-    ctx.lineTo(6, 3);
-    ctx.moveTo(6, -3);
-    ctx.lineTo(-6, 3);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(-6, -3, 2, 0, Math.PI * 2);
-    ctx.arc(6, -3, 2, 0, Math.PI * 2);
-    ctx.arc(-6, 3, 2, 0, Math.PI * 2);
-    ctx.arc(6, 3, 2, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (p.type === "multiplier") {
-    // Premium Support icon: star badge
-    ctx.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const outerAng = (i / 5) * Math.PI * 2 - Math.PI / 2;
-      const innerAng = outerAng + Math.PI / 5;
-      const ox = Math.cos(outerAng) * 6;
-      const oy = Math.sin(outerAng) * 6;
-      const ix = Math.cos(innerAng) * 2.6;
-      const iy = Math.sin(innerAng) * 2.6;
-      if (i === 0) ctx.moveTo(ox, oy);
-      else ctx.lineTo(ox, oy);
-      ctx.lineTo(ix, iy);
-    }
-    ctx.closePath();
-    ctx.fill();
-  }
+  drawPowerUpGlyph(ctx, p.type);
   ctx.restore();
 }
 
@@ -1563,21 +1659,25 @@ function draw() {
   });
   ctx.shadowBlur = 0;
 
-  enemyBullets.forEach((b) => {
-    ctx.beginPath();
-    if (b.boss) {
-      ctx.fillStyle = "#ffb347";
-      ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
-    } else {
-      ctx.fillStyle = "#ff5566";
-      ctx.arc(b.x, b.y, 3.5, 0, Math.PI * 2);
-    }
-    ctx.fill();
-  });
+  if (phase !== "bonus" && phase !== "shop") {
+    enemyBullets.forEach((b) => {
+      ctx.beginPath();
+      if (b.boss) {
+        ctx.fillStyle = "#ffb347";
+        ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+      } else {
+        ctx.fillStyle = "#ff5566";
+        ctx.arc(b.x, b.y, 3.5, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    });
+  }
 
   drawWaveBanner();
 
-  powerUps.forEach(drawPowerUp);
+  if (phase !== "bonus" && phase !== "shop") {
+    powerUps.forEach(drawPowerUp);
+  }
 
   drawPlayer();
   drawHud();
@@ -1664,3 +1764,4 @@ boss = null;
 viruses = buildFormation(wave);
 waveTotalCount = viruses.length;
 draw();
+drawLegend();
