@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="style.css?v=6" />
+<link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
   <div id="starfield"></div>
@@ -56,9 +56,15 @@
         </div>
 
         <div class="dpad">
-          <button class="dbtn left" data-dir="left">&#9664;</button>
-          <button class="dbtn fire" id="fireBtn">FIRE</button>
-          <button class="dbtn right" data-dir="right">&#9654;</button>
+          <button class="dbtn left" data-dir="left" aria-label="Move left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+          </button>
+          <button class="dbtn fire" id="fireBtn" aria-label="Fire">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 11l6-6 6 6"/></svg>
+          </button>
+          <button class="dbtn right" data-dir="right" aria-label="Move right">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
         </div>
       </div>
     </div>

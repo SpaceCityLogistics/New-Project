@@ -413,21 +413,25 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 18px;
   padding-top: 14px;
 }
 
 .dbtn {
-  width: 64px;
-  height: 54px;
-  border-radius: 16px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--green-soft);
-  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.dbtn svg {
+  width: 24px;
+  height: 24px;
 }
 
 .dbtn:active {
@@ -435,16 +439,19 @@ canvas {
 }
 
 .dbtn.fire {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: #2a0808;
-  font-weight: 800;
-  font-family: 'Baloo 2', sans-serif;
-  font-size: 14px;
-  width: 84px;
-  box-shadow: 0 0 16px rgba(255, 85, 102, 0.4);
+  width: 66px;
+  height: 66px;
+  background: var(--green);
+  border-color: var(--green);
+  color: #02150a;
+  box-shadow: 0 0 20px rgba(57, 255, 106, 0.5);
+}
+
+.dbtn.fire svg {
+  width: 28px;
+  height: 28px;
 }
 
 .dbtn.fire:active {
-  background: #ff8896;
+  background: var(--green-soft);
 }
