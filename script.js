@@ -842,7 +842,7 @@ fireBtn.addEventListener("pointerdown", (e) => {
 window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") moveLeft = true;
   if (e.key === "ArrowRight") moveRight = true;
-  if (e.key === " ") {
+  if (e.key === " " || e.key === "s" || e.key === "S") {
     fireHeld = true;
     if (running) fire();
   }
@@ -850,7 +850,7 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => {
   if (e.key === "ArrowLeft") moveLeft = false;
   if (e.key === "ArrowRight") moveRight = false;
-  if (e.key === " ") fireHeld = false;
+  if (e.key === " " || e.key === "s" || e.key === "S") fireHeld = false;
 });
 
 let dragging = false;
