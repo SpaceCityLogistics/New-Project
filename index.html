@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Axolotl Assault</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <header class="topbar">
+        <div class="score">Score: <span id="score">0</span></div>
+        <div class="lives">Lives: <span id="lives">3</span></div>
+        <div class="best">Best: <span id="best">0</span></div>
+      </header>
+
+      <div class="board-wrap">
+        <canvas id="board" width="300" height="450"></canvas>
+
+        <div id="startOverlay" class="overlay">
+          <h1>Axolotl Assault</h1>
+          <p>Drag to move, tap FIRE to shoot</p>
+          <button id="startBtn">Play</button>
+        </div>
+
+        <div id="gameOverOverlay" class="overlay hidden">
+          <h1>Game Over</h1>
+          <p id="finalScore">Score: 0</p>
+          <button id="restartBtn">Play Again</button>
+        </div>
+      </div>
+
+      <div class="dpad">
+        <button class="dbtn left" data-dir="left">&#9664;</button>
+        <button class="dbtn fire" id="fireBtn">FIRE</button>
+        <button class="dbtn right" data-dir="right">&#9654;</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
