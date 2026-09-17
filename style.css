@@ -124,7 +124,7 @@ html, body {
 }
 
 .sidePanel {
-  width: 190px;
+  width: 230px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -146,8 +146,8 @@ html, body {
 }
 
 .sideLogo {
-  width: 120px;
-  height: 120px;
+  width: 190px;
+  height: 190px;
   object-fit: contain;
   filter: drop-shadow(0 0 14px rgba(57, 255, 106, 0.45));
 }
@@ -207,8 +207,8 @@ html, body {
     font-size: 15px;
   }
   .sideLogo {
-    width: 52px;
-    height: 52px;
+    width: 68px;
+    height: 68px;
   }
   .brandPanel {
     order: -1;
