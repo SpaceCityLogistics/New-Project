@@ -124,7 +124,7 @@ html, body {
 }
 
 .sidePanel {
-  width: 280px;
+  width: 320px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -136,17 +136,51 @@ html, body {
   box-shadow: none;
 }
 
+.homeBaseBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--green);
+  background: rgba(57, 255, 106, 0.08);
+  color: var(--green);
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.homeBaseBtn:hover {
+  background: rgba(57, 255, 106, 0.2);
+}
+
+.homeBaseIcon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .sideLogo {
-  width: 260px;
-  height: 260px;
+  width: 300px;
+  height: 300px;
   object-fit: contain;
   filter: drop-shadow(0 0 14px rgba(57, 255, 106, 0.45));
 }
 
-.tagline {
+.contactPanel h2 {
   margin: 0;
-  font-size: 12px;
-  color: var(--text-dim);
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 20px;
+  line-height: 1.3;
+  color: var(--mint);
+  text-shadow: 0 0 12px rgba(168, 255, 184, 0.4);
+}
+
+.contactPanel h2 .ctaAccent {
+  color: var(--green);
+  text-shadow: 0 0 16px rgba(57, 255, 106, 0.6);
 }
 
 .contactLink {
@@ -202,8 +236,8 @@ html, body {
     gap: 14px;
   }
   .sideLogo {
-    width: 90px;
-    height: 90px;
+    width: 110px;
+    height: 110px;
   }
   .brandPanel {
     order: -1;
