@@ -52,6 +52,34 @@
   }
 })();
 
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audioCtx = new AC();
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function playShootSound() {
+  const ac = ensureAudio();
+  if (!ac) return;
+  const t = ac.currentTime;
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(880, t);
+  osc.frequency.exponentialRampToValueAtTime(180, t + 0.09);
+  gain.gain.setValueAtTime(0.14, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+  osc.connect(gain);
+  gain.connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + 0.12);
+}
+
 const canvas = document.getElementById("board");
 const ctx = canvas.getContext("2d");
 const W = canvas.width;
@@ -77,6 +105,7 @@ const CENTER_X = W / 2;
 const VIRUS_COLORS = ["#ff5566", "#ffb347", "#ffe066", "#b967ff", "#39c9ff"];
 const FORMATION_PATTERNS = ["grid", "vshape", "diamond", "zigzag", "arc"];
 const BOSS_INTERVAL = 3;
+const BOSS_FORMS = ["orb", "hex", "crystal", "twin"];
 const MAX_WEAPON = 3;
 const SHIELD_DURATION = 8;
 const RAPID_DURATION = 8;
@@ -200,6 +229,7 @@ function buildFormation(waveNum) {
 
 function makeBoss(waveNum) {
   const hp = 18 + waveNum * 6;
+  const bossIndex = Math.round(waveNum / BOSS_INTERVAL) - 1;
   return {
     x: CENTER_X,
     y: 70,
@@ -210,6 +240,7 @@ function makeBoss(waveNum) {
     dir: 1,
     speed: 40 + waveNum * 2,
     shotTimer: 1,
+    form: BOSS_FORMS[bossIndex % BOSS_FORMS.length],
   };
 }
 
@@ -298,6 +329,7 @@ function fire() {
     bullets.push({ x: player.x - 8, y, vx: -70, vy: -430 });
     bullets.push({ x: player.x + 8, y, vx: 70, vy: -430 });
   }
+  playShootSound();
   fireCooldown = player.rapidTime > 0 ? 0.09 : 0.22;
 }
 
@@ -555,24 +587,10 @@ function drawVirus(a) {
     ctx.fill();
   }
 
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = "#04060a";
-  ctx.beginPath();
-  ctx.arc(-4, -1, 2.2, 0, Math.PI * 2);
-  ctx.arc(4, -1, 2.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(0, 4, 2, Math.PI * 0.1, Math.PI * 0.9);
-  ctx.stroke();
   ctx.restore();
 }
 
-function drawBoss(b) {
-  ctx.save();
-  ctx.translate(b.x, b.y);
-  const pulse = 1 + Math.sin(frame * 0.1) * 0.04;
-  ctx.scale(pulse, pulse);
-
+function drawBossOrb(b) {
   ctx.shadowColor = "#ff2e63";
   ctx.shadowBlur = 18;
   ctx.fillStyle = "#3a0a1a";
@@ -607,6 +625,129 @@ function drawBoss(b) {
     ctx.arc(i * 14, -4, 1.8, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+function drawBossHex(b) {
+  const color = "#b967ff";
+  const r = b.w / 2 - 4;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "#1a0a2e";
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2 + frame * 0.008;
+    const px = Math.cos(ang) * r;
+    const py = Math.sin(ang) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2 + frame * 0.008;
+    const px = Math.cos(ang) * r;
+    const py = Math.sin(ang) * r;
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  ctx.fillStyle = "#e8c3ff";
+  ctx.fill();
+}
+
+function drawBossCrystal(b) {
+  const color = "#39c9ff";
+  const h = b.h / 2 + 6;
+  const w = b.w / 2 - 10;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "#0a1f2e";
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, -h);
+  ctx.lineTo(w, -h * 0.15);
+  ctx.lineTo(w * 0.5, h);
+  ctx.lineTo(-w * 0.5, h);
+  ctx.lineTo(-w, -h * 0.15);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(57,201,255,0.6)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -h);
+  ctx.lineTo(0, h);
+  ctx.moveTo(w, -h * 0.15);
+  ctx.lineTo(-w * 0.5, h);
+  ctx.moveTo(-w, -h * 0.15);
+  ctx.lineTo(w * 0.5, h);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#c8f0ff";
+  ctx.beginPath();
+  ctx.arc(0, -h * 0.35, 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawBossTwin(b) {
+  const color = "#ffb347";
+  const r = b.w / 3 - 4;
+  [-1, 1].forEach((side) => {
+    const cx = side * (b.w / 4);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = "#3a250a";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const spikes = 8;
+    for (let i = 0; i < spikes; i++) {
+      const ang = (i / spikes) * Math.PI * 2 + frame * 0.02 * side;
+      const r1 = r;
+      const r2 = r + 5;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(ang) * r1, Math.sin(ang) * r1);
+      ctx.lineTo(cx + Math.cos(ang) * r2, Math.sin(ang) * r2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+  });
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-b.w / 4 + r, 0);
+  ctx.lineTo(b.w / 4 - r, 0);
+  ctx.stroke();
+}
+
+function drawBoss(b) {
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  const pulse = 1 + Math.sin(frame * 0.1) * 0.04;
+  ctx.scale(pulse, pulse);
+
+  if (b.form === "hex") drawBossHex(b);
+  else if (b.form === "crystal") drawBossCrystal(b);
+  else if (b.form === "twin") drawBossTwin(b);
+  else drawBossOrb(b);
+
   ctx.restore();
 
   const barW = 110;
@@ -703,34 +844,59 @@ function drawPowerUp(p) {
   ctx.shadowBlur = 0;
   ctx.fillStyle = icons[p.type];
   ctx.strokeStyle = icons[p.type];
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.6;
   if (p.type === "weapon") {
+    // Phone Repair icon: wrench
     ctx.beginPath();
-    ctx.moveTo(0, -5);
-    ctx.lineTo(5, 3);
-    ctx.lineTo(-5, 3);
-    ctx.closePath();
+    ctx.arc(-3, -3, 2.1, 0, Math.PI * 2);
+    ctx.arc(3, 3, 2.1, 0, Math.PI * 2);
     ctx.fill();
-  } else if (p.type === "shield") {
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.moveTo(-2, -2);
+    ctx.lineTo(2, 2);
     ctx.stroke();
-  } else if (p.type === "rapid") {
+  } else if (p.type === "shield") {
+    // Security icon: shield outline
     ctx.beginPath();
-    ctx.moveTo(-2, -6);
-    ctx.lineTo(3, -1);
-    ctx.lineTo(0, -1);
-    ctx.lineTo(2, 6);
-    ctx.lineTo(-3, 0);
-    ctx.lineTo(0, 0);
+    ctx.moveTo(0, -6);
+    ctx.lineTo(5, -3.5);
+    ctx.lineTo(5, 1.5);
+    ctx.quadraticCurveTo(5, 6, 0, 7.5);
+    ctx.quadraticCurveTo(-5, 6, -5, 1.5);
+    ctx.lineTo(-5, -3.5);
     ctx.closePath();
     ctx.fill();
-  } else if (p.type === "life") {
+  } else if (p.type === "rapid") {
+    // Data Transfer icon: up/down arrows
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, 5);
-    ctx.bezierCurveTo(-7, -2, -3, -7, 0, -3);
-    ctx.bezierCurveTo(3, -7, 7, -2, 0, 5);
+    ctx.moveTo(-3, 2);
+    ctx.lineTo(-3, -5);
+    ctx.moveTo(-5.5, -2);
+    ctx.lineTo(-3, -5);
+    ctx.lineTo(-0.5, -2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(3, -2);
+    ctx.lineTo(3, 5);
+    ctx.moveTo(0.5, 2);
+    ctx.lineTo(3, 5);
+    ctx.lineTo(5.5, 2);
+    ctx.stroke();
+  } else if (p.type === "life") {
+    // Tech Support icon: gear
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
     ctx.fill();
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * Math.PI * 2;
+      ctx.save();
+      ctx.rotate(ang);
+      ctx.translate(0, -5.5);
+      ctx.fillRect(-1, -1.4, 2, 2.8);
+      ctx.restore();
+    }
   }
   ctx.restore();
 }
@@ -789,17 +955,23 @@ function draw() {
   ctx.fillStyle = "#7dffa3";
   ctx.shadowColor = "#39ff6a";
   ctx.shadowBlur = 6;
-  bullets.forEach((b) => ctx.fillRect(b.x - 2, b.y - 5, 4, 10));
+  bullets.forEach((b) => {
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
   ctx.shadowBlur = 0;
 
   enemyBullets.forEach((b) => {
+    ctx.beginPath();
     if (b.boss) {
       ctx.fillStyle = "#ffb347";
-      ctx.fillRect(b.x - 3, b.y - 6, 6, 12);
+      ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
     } else {
       ctx.fillStyle = "#ff5566";
-      ctx.fillRect(b.x - 2, b.y - 5, 4, 10);
+      ctx.arc(b.x, b.y, 3.5, 0, Math.PI * 2);
     }
+    ctx.fill();
   });
 
   drawWaveBanner();

@@ -172,6 +172,13 @@ html, body {
   color: var(--text-dim);
 }
 
+.miniIcon {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+  flex-shrink: 0;
+}
+
 .ctaBtn {
   display: inline-block;
   margin-top: 6px;
