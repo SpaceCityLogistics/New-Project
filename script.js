@@ -111,7 +111,7 @@ const GAP_Y = 32;
 const FORMATION_TOP = 46;
 const CENTER_X = W / 2;
 
-const VIRUS_COLORS = ["#ff5566", "#ffb347", "#ffe066", "#b967ff", "#39c9ff"];
+const VIRUS_COLORS = ["#ff1a4d", "#ff9100", "#f4ff1a", "#c724ff", "#00e5ff"];
 const FORMATION_PATTERNS = ["grid", "vshape", "diamond", "zigzag", "arc"];
 const BOSS_INTERVAL = 3;
 const BOSS_FORMS = ["orb", "hex", "crystal", "twin"];
