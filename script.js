@@ -1347,9 +1347,13 @@ function drawPlayer() {
   ctx.save();
   ctx.translate(player.x, player.y);
 
+  const w = player.w;
+  const h = player.h;
+  ctx.translate(0, Math.sin(frame * 0.08) * 1.2); // gentle hover bob
+
   if (hasAbility(player, "shield")) {
     ctx.beginPath();
-    ctx.arc(0, 0, player.w / 2 + 10, 0, Math.PI * 2);
+    ctx.arc(0, 0, w / 2 + 12, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(57,201,255,0.8)";
     ctx.lineWidth = 2;
     ctx.shadowColor = "#39c9ff";
@@ -1358,47 +1362,178 @@ function drawPlayer() {
     ctx.shadowBlur = 0;
   }
 
-  // thruster flame
-  const flameLen = 6 + Math.sin(frame * 0.6) * 3;
+  if (hasAbility(player, "multiplier")) {
+    const haloPulse = 1 + Math.sin(frame * 0.15) * 0.15;
+    ctx.save();
+    ctx.translate(0, -h / 2 - 10);
+    ctx.scale(haloPulse, haloPulse);
+    ctx.strokeStyle = "#fff2c0";
+    ctx.lineWidth = 1.6;
+    ctx.shadowColor = "#fff2c0";
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 7, 2.2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  if (hasAbility(player, "homing")) {
+    ctx.save();
+    ctx.translate(0, -h / 2 - 6);
+    ctx.rotate(frame * 0.06);
+    ctx.strokeStyle = "#ff6b81";
+    ctx.lineWidth = 1.4;
+    ctx.shadowColor = "#ff6b81";
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(-3.5, 0);
+    ctx.lineTo(3.5, 0);
+    ctx.moveTo(0, -3.5);
+    ctx.lineTo(0, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.3, 0, Math.PI * 2);
+    ctx.fillStyle = "#ff6b81";
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  if (hasAbility(player, "overclock")) {
+    const flare = 8 + Math.sin(frame * 0.5) * 3;
+    ctx.beginPath();
+    ctx.moveTo(-6, h / 2 - 2);
+    ctx.lineTo(0, h / 2 + flare);
+    ctx.lineTo(6, h / 2 - 2);
+    ctx.closePath();
+    ctx.fillStyle = "#ff8c3c";
+    ctx.globalAlpha = 0.7;
+    ctx.shadowColor = "#ff8c3c";
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
+
+  if (hasAbility(player, "rapid")) {
+    ctx.strokeStyle = "#ffd23f";
+    ctx.lineWidth = 1.4;
+    ctx.shadowColor = "#ffd23f";
+    ctx.shadowBlur = 6;
+    [0, 10].forEach((offset) => {
+      const t = (frame * 4 + offset) % 20;
+      const ringR = 2 + t * 0.5;
+      ctx.globalAlpha = Math.max(0, 1 - t / 20);
+      ctx.beginPath();
+      ctx.ellipse(0, h / 2 + 2, ringR, ringR * 0.4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
+
+  // soft underlight glow
   ctx.beginPath();
-  ctx.moveTo(-5, player.h / 2 - 2);
-  ctx.lineTo(0, player.h / 2 + flameLen);
-  ctx.lineTo(5, player.h / 2 - 2);
+  ctx.ellipse(0, h / 2 - 1, 6, 2, 0, 0, Math.PI * 2);
   ctx.fillStyle = "#7dffa3";
-  ctx.globalAlpha = 0.85;
+  ctx.globalAlpha = 0.55;
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // hull
+  // saucer hull
   ctx.shadowColor = "#39ff6a";
   ctx.shadowBlur = 10;
   ctx.fillStyle = "#0c1712";
   ctx.strokeStyle = "#39ff6a";
   ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.moveTo(0, -player.h / 2);
-  ctx.lineTo(player.w / 2, player.h / 2 - 2);
-  ctx.lineTo(player.w / 4, player.h / 2);
-  ctx.lineTo(-player.w / 4, player.h / 2);
-  ctx.lineTo(-player.w / 2, player.h / 2 - 2);
+  ctx.ellipse(0, 2, w / 2 + 3, h / 3.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(0, 4.5, w / 2 - 1, h / 5, 0, 0, Math.PI);
+  ctx.strokeStyle = "rgba(57,255,106,0.5)";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // dome cockpit
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = "#a8ffb8";
+  ctx.strokeStyle = "#39ff6a";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(0, -1, 6.5, Math.PI, 0, false);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // cockpit
-  ctx.shadowBlur = 6;
-  ctx.fillStyle = "#a8ffb8";
+  // beacon light
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = Math.sin(frame * 0.25) > 0 ? "#ffe066" : "#5a5218";
   ctx.beginPath();
-  ctx.ellipse(0, -1, 4, 6, 0, 0, Math.PI * 2);
+  ctx.arc(0, -7.5, 1.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // wing tips
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = "#39ff6a";
-  ctx.beginPath();
-  ctx.arc(-player.w / 2, player.h / 2 - 2, 2, 0, Math.PI * 2);
-  ctx.arc(player.w / 2, player.h / 2 - 2, 2, 0, Math.PI * 2);
-  ctx.fill();
+  // pulsing rim lights
+  const pipCount = 6;
+  for (let i = 0; i < pipCount; i++) {
+    const a = (i / pipCount) * Math.PI * 2 + frame * 0.03;
+    const px = Math.cos(a) * (w / 2 + 1);
+    const py = 2 + Math.sin(a) * (h / 3.2);
+    ctx.globalAlpha = 0.35 + 0.65 * Math.max(0, Math.sin(frame * 0.15 + i));
+    ctx.fillStyle = "#39ff6a";
+    ctx.beginPath();
+    ctx.arc(px, py, 1.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  if (hasAbility(player, "weapon")) {
+    ctx.fillStyle = "#a8ffb8";
+    ctx.strokeStyle = "#a8ffb8";
+    ctx.shadowColor = "#39ff6a";
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 1.6;
+    [-1, 1].forEach((side) => {
+      ctx.beginPath();
+      ctx.ellipse(side * (w / 2 + 3), 4, 2.6, 1.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(side * (w / 2 + 3), 0.5);
+      ctx.lineTo(side * (w / 2 + 3), -5);
+      ctx.stroke();
+    });
+    ctx.shadowBlur = 0;
+  }
+
+  if (hasAbility(player, "magnet")) {
+    ctx.strokeStyle = "#ff9ff3";
+    ctx.lineWidth = 1.3;
+    ctx.shadowColor = "#ff9ff3";
+    ctx.shadowBlur = 6;
+    const coilR = 3 + Math.sin(frame * 0.2) * 1;
+    [-1, 1].forEach((side) => {
+      ctx.beginPath();
+      ctx.arc(side * (w / 2 + 5), 2, coilR, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.shadowBlur = 0;
+  }
+
+  if (hasAbility(player, "pierce")) {
+    ctx.fillStyle = "#c724ff";
+    ctx.shadowColor = "#c724ff";
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, -h / 2 - 8);
+    ctx.lineTo(-2, -h / 2 - 1);
+    ctx.lineTo(2, -h / 2 - 1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
 
   if (hasAbility(player, "drone")) {
     ctx.save();
