@@ -110,6 +110,8 @@ const GAP_X = 38;
 const GAP_Y = 32;
 const FORMATION_TOP = 46;
 const CENTER_X = W / 2;
+const PLAYER_MIN_Y = H * 0.5;
+const PLAYER_MAX_Y = H - 20;
 
 const VIRUS_COLORS = ["#ff1a4d", "#ff9100", "#f4ff1a", "#c724ff", "#00e5ff"];
 const FORMATION_PATTERNS = ["grid", "vshape", "diamond", "zigzag", "arc"];
@@ -161,6 +163,8 @@ let waveBanner = "";
 let waveBannerTime = 0;
 let moveLeft = false;
 let moveRight = false;
+let moveUp = false;
+let moveDown = false;
 let fireHeld = false;
 let fireCooldown = 0;
 let stars = [];
@@ -461,7 +465,7 @@ function closeShopAndStartBoss() {
 function freshPlayer() {
   return {
     x: W / 2,
-    y: H - 36,
+    y: PLAYER_MAX_Y,
     w: 28,
     h: 22,
     speed: 220,
@@ -578,7 +582,10 @@ function update(dt) {
   const speedMult = hasAbility(player, "overclock") ? 1.4 : 1;
   if (moveLeft) player.x -= player.speed * speedMult * dt;
   if (moveRight) player.x += player.speed * speedMult * dt;
+  if (moveUp) player.y -= player.speed * speedMult * dt;
+  if (moveDown) player.y += player.speed * speedMult * dt;
   player.x = Math.max(player.w, Math.min(W - player.w, player.x));
+  player.y = Math.max(PLAYER_MIN_Y, Math.min(PLAYER_MAX_Y, player.y));
 
   fireCooldown -= dt;
   if (fireHeld && phase !== "shop") fire();
@@ -1895,11 +1902,13 @@ function draw() {
   }
 }
 
-document.querySelectorAll(".dbtn.left, .dbtn.right").forEach((btn) => {
+document.querySelectorAll(".dbtn.left, .dbtn.right, .dbtn.up, .dbtn.down").forEach((btn) => {
   const dir = btn.dataset.dir;
   const setState = (v) => {
     if (dir === "left") moveLeft = v;
     if (dir === "right") moveRight = v;
+    if (dir === "up") moveUp = v;
+    if (dir === "down") moveDown = v;
   };
   btn.addEventListener("pointerdown", (e) => {
     e.preventDefault();
@@ -1922,6 +1931,8 @@ fireBtn.addEventListener("pointerdown", (e) => {
 window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") moveLeft = true;
   if (e.key === "ArrowRight") moveRight = true;
+  if (e.key === "ArrowUp") moveUp = true;
+  if (e.key === "ArrowDown") moveDown = true;
   if (e.key === " " || e.key === "s" || e.key === "S") {
     fireHeld = true;
     if (running) fire();
@@ -1930,21 +1941,26 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => {
   if (e.key === "ArrowLeft") moveLeft = false;
   if (e.key === "ArrowRight") moveRight = false;
+  if (e.key === "ArrowUp") moveUp = false;
+  if (e.key === "ArrowDown") moveDown = false;
   if (e.key === " " || e.key === "s" || e.key === "S") fireHeld = false;
 });
 
 let dragging = false;
+function dragPlayerTo(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  player.x = Math.max(player.w, Math.min(W - player.w, (clientX - rect.left) * scaleX));
+  player.y = Math.max(PLAYER_MIN_Y, Math.min(PLAYER_MAX_Y, (clientY - rect.top) * scaleY));
+}
 canvas.addEventListener("pointerdown", (e) => {
   dragging = true;
-  const rect = canvas.getBoundingClientRect();
-  const scale = W / rect.width;
-  player.x = (e.clientX - rect.left) * scale;
+  dragPlayerTo(e.clientX, e.clientY);
 });
 canvas.addEventListener("pointermove", (e) => {
   if (!dragging || !running) return;
-  const rect = canvas.getBoundingClientRect();
-  const scale = W / rect.width;
-  player.x = (e.clientX - rect.left) * scale;
+  dragPlayerTo(e.clientX, e.clientY);
 });
 window.addEventListener("pointerup", () => (dragging = false));
 canvas.addEventListener("click", () => running && fire());
