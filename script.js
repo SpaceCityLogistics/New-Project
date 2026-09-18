@@ -93,7 +93,6 @@ const gameOverOverlay = document.getElementById("gameOverOverlay");
 const finalScoreEl = document.getElementById("finalScore");
 const startBtn = document.getElementById("startBtn");
 const restartBtn = document.getElementById("restartBtn");
-const fireBtn = document.getElementById("fireBtn");
 const shopOverlay = document.getElementById("shopOverlay");
 const shopGrid = document.getElementById("shopGrid");
 const shopCoinsEl = document.getElementById("shopCoins");
@@ -165,7 +164,6 @@ let moveLeft = false;
 let moveRight = false;
 let moveUp = false;
 let moveDown = false;
-let fireHeld = false;
 let fireCooldown = 0;
 let stars = [];
 let hitFlash = 0;
@@ -588,7 +586,7 @@ function update(dt) {
   player.y = Math.max(PLAYER_MIN_Y, Math.min(PLAYER_MAX_Y, player.y));
 
   fireCooldown -= dt;
-  if (fireHeld && phase !== "shop") fire();
+  if (phase !== "shop") fire();
 
   if (player.invuln > 0) player.invuln -= dt;
   if (hitFlash > 0) hitFlash -= dt;
@@ -1919,31 +1917,17 @@ document.querySelectorAll(".dbtn.left, .dbtn.right, .dbtn.up, .dbtn.down").forEa
   );
 });
 
-fireBtn.addEventListener("pointerdown", (e) => {
-  e.preventDefault();
-  fireHeld = true;
-  if (running) fire();
-});
-["pointerup", "pointerleave", "pointercancel"].forEach((ev) =>
-  fireBtn.addEventListener(ev, () => (fireHeld = false))
-);
-
 window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") moveLeft = true;
   if (e.key === "ArrowRight") moveRight = true;
   if (e.key === "ArrowUp") moveUp = true;
   if (e.key === "ArrowDown") moveDown = true;
-  if (e.key === " " || e.key === "s" || e.key === "S") {
-    fireHeld = true;
-    if (running) fire();
-  }
 });
 window.addEventListener("keyup", (e) => {
   if (e.key === "ArrowLeft") moveLeft = false;
   if (e.key === "ArrowRight") moveRight = false;
   if (e.key === "ArrowUp") moveUp = false;
   if (e.key === "ArrowDown") moveDown = false;
-  if (e.key === " " || e.key === "s" || e.key === "S") fireHeld = false;
 });
 
 let dragging = false;
@@ -1963,7 +1947,6 @@ canvas.addEventListener("pointermove", (e) => {
   dragPlayerTo(e.clientX, e.clientY);
 });
 window.addEventListener("pointerup", () => (dragging = false));
-canvas.addEventListener("click", () => running && fire());
 
 startBtn.addEventListener("click", startGame);
 restartBtn.addEventListener("click", startGame);

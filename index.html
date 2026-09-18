@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="style.css?v=11" />
+<link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body>
   <div id="starfield"></div>
@@ -35,7 +35,7 @@
 
           <div id="startOverlay" class="overlay">
             <h1>AstroTech Defender</h1>
-            <p>Drag or use arrows to move &middot; tap FIRE to shoot</p>
+            <p>Drag or use arrows to move &middot; your ship fires automatically</p>
             <p class="sub">Purge the viruses. Grab power-ups. Protect the network.</p>
             <p class="legendLabel">Power-Ups</p>
             <canvas id="legendCanvas" width="240" height="100"></canvas>
@@ -79,22 +79,17 @@
         </div>
 
         <div class="dpad">
+          <button class="dbtn up" data-dir="up" aria-label="Move up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg>
+          </button>
           <button class="dbtn left" data-dir="left" aria-label="Move left">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
           </button>
-          <div class="dpadVertical">
-            <button class="dbtn small up" data-dir="up" aria-label="Move up">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg>
-            </button>
-            <button class="dbtn small down" data-dir="down" aria-label="Move down">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>
-            </button>
-          </div>
-          <button class="dbtn fire" id="fireBtn" aria-label="Fire">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/></svg>
-          </button>
           <button class="dbtn right" data-dir="right" aria-label="Move right">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <button class="dbtn down" data-dir="down" aria-label="Move down">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>
           </button>
         </div>
       </div>
@@ -110,6 +105,6 @@
 
   </div>
 
-  <script src="script.js?v=13"></script>
+  <script src="script.js?v=14"></script>
 </body>
 </html>
